@@ -41,7 +41,6 @@ public class CodeGenerator {
             //System.out.println(GraphVizPrinter.print(graph));
             RegisterAllocator allocator = new NaiveRegisterAllocator(this.manager);
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
-            System.out.println(registers);
 
             System.out.println("The stack is using: " + this.manager.getStackSize() + " bytes");
 
