@@ -26,6 +26,7 @@ public class Main {
             System.exit(3);
         }
         Path input = Path.of(args[0]);
+        Path assembly = Path.of(args[1] + ".s");
         Path output = Path.of(args[1]);
         ProgramTree program = lexAndParse(input);
         try {
@@ -49,9 +50,12 @@ public class Main {
             }
         }
 
-        // TODO: generate assembly and invoke gcc instead of generating abstract assembly
         String s = new CodeGenerator().generateCode(graphs);
-        Files.writeString(output, s);
+        Files.writeString(assembly, s);
+
+        //compile with gcc
+        String[] gccCommand = {"gcc", assembly.toString(), "-o", output.toString()};
+        Runtime.getRuntime().exec(gccCommand);
     }
 
     private static ProgramTree lexAndParse(Path input) throws IOException {
