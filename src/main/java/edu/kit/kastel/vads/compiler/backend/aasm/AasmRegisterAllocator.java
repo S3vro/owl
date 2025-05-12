@@ -37,6 +37,7 @@ public class AasmRegisterAllocator implements RegisterAllocator {
         }
     }
 
+
     private static boolean needsRegister(Node node) {
         return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block || node instanceof ReturnNode);
     }
