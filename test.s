@@ -10,23 +10,20 @@ movq $0x3C, %rax
 syscall
 #own-code
 _main:
-mov $1, %ebx
-mov %ebx, %ecx
-add %ebx, %ecx
-mov %ecx, %esi
-add %ebx, %esi
-mov %esi, %edi
-add %ebx, %edi
-mov %edi, %r8d
-add %ebx, %r8d
-mov %r8d, %r9d
-add %ebx, %r9d
-mov %r9d, %r10d
-add %ebx, %r10d
-mov %r10d, %r11d
-add %ebx, %r11d
-mov %r11d, %r12d
-add %ebx, %r12d
-mov %r12d, %eax
+mov $0, %ebx
+mov $-2147483648, %ecx
+mov %ebx, %esi
+sub %ecx, %esi
+mov %esi, %eax
+cdq
+idiv %esi
+mov %eax, %edi
+mov %ebx, %r8d
+sub %edi, %r8d
+mov %esi, %eax
+cdq
+idiv %r8d
+mov %eax, %r9d
+mov %r9d, %eax
 ret
 
