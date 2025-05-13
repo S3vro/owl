@@ -131,12 +131,6 @@ public class CodeGenerator {
         Register op2 = registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT));
         Register target = registers.get(node);
 
-        builder.append("xor ")
-                .append(HardwareRegister.EDX)
-                .append(", ")
-                .append(HardwareRegister.EDX)
-                .append('\n');
-
         if (op1 instanceof StackRegister stackOp1) {
             this.manager.retrieve(builder, stackOp1, HardwareRegister.R15D);
         }
@@ -151,7 +145,10 @@ public class CodeGenerator {
                     .append('\n');
         }
 
-        builder.append("div ").append(op1 instanceof HardwareRegister ? op1 : HardwareRegister.R15D).append('\n');
+        //Sign extend into EDX
+        builder.append("cdq").append('\n');
+
+        builder.append("idiv ").append(op1 instanceof HardwareRegister ? op1 : HardwareRegister.R15D).append('\n');
 
         HardwareRegister resultRegister = mod ? HardwareRegister.EDX : HardwareRegister.EAX;
 

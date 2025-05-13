@@ -56,7 +56,6 @@ public class NaiveRegisterAllocator implements RegisterAllocator {
             if (this.id < 11) {
                 this.registers.put(node, HARDWARE_REGS.get(this.id++));
             } else {
-                System.out.println(node);
                 // if no more registers spill
                 int stackId = this.id++;
                 this.stackManager.addToStack(new StackRegister(stackId));
