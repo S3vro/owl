@@ -1,5 +1,8 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
+import edu.kit.kastel.vads.compiler.backend.aasm.HardwareRegister;
+import edu.kit.kastel.vads.compiler.backend.aasm.StackManager;
+import edu.kit.kastel.vads.compiler.backend.aasm.StackRegister;
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import java.util.Map;
 
@@ -11,12 +14,23 @@ public final class ConstIntNode extends Node {
         this.value = value;
     }
 
-    public void toASM(StringBuilder builder, Map<Node, Register> registers) {
-        builder.append("mov ")
-                .append("$")
-                .append(value)
-                .append(", ")
-                .append(registers.get(this));
+    public void toASM(StringBuilder builder, Map<Node, Register> registers, StackManager manager) {
+        Register target = registers.get(this);
+
+        if (target instanceof HardwareRegister)  {
+            builder.append("mov ")
+                    .append("$")
+                    .append(value)
+                    .append(", ")
+                    .append(registers.get(this));
+        } else {
+            builder.append("mov ")
+                    .append("$")
+                    .append(value)
+                    .append(", ")
+                    .append(manager.getOffset((StackRegister) target))
+                    .append(String.format("(%s)", HardwareRegister.RSP));
+        }
     }
 
     public int value() {

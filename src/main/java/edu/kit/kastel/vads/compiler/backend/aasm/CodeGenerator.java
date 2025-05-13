@@ -70,10 +70,10 @@ public class CodeGenerator {
             case AddNode add -> binary(builder, registers, add, "add");
             case SubNode sub -> binary(builder, registers, sub, "sub");
             case MulNode mul -> binary(builder, registers, mul, "imul");
-            case DivNode div -> binary(builder, registers, div, "div");
-            case ModNode mod -> binary(builder, registers, mod, "mod");
+            case DivNode div -> divOrMod(builder, registers, div, false);
+            case ModNode mod -> divOrMod(builder, registers, mod, true);
             case ReturnNode r -> r.toASM(builder, registers, manager);
-            case ConstIntNode c -> c.toASM(builder, registers);
+            case ConstIntNode c -> c.toASM(builder, registers, manager);
             case Phi _ -> throw new UnsupportedOperationException("phi");
             case Block _, ProjNode _, StartNode _ -> {
                 // do nothing, skip line break
@@ -124,5 +124,45 @@ public class CodeGenerator {
         if (target instanceof StackRegister targetStack) {
             manager.store(builder, HardwareRegister.R15D, targetStack);
         }
+    }
+
+    private void divOrMod(StringBuilder builder, Map<Node,Register> registers, BinaryOperationNode node, boolean mod) {
+        Register op1 = registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT));
+        Register op2 = registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT));
+        Register target = registers.get(node);
+
+        builder.append("xor ")
+                .append(HardwareRegister.EDX)
+                .append(", ")
+                .append(HardwareRegister.EDX)
+                .append('\n');
+
+        if (op1 instanceof StackRegister stackOp1) {
+            this.manager.retrieve(builder, stackOp1, HardwareRegister.R15D);
+        }
+
+        if (op2 instanceof StackRegister stackOp2) {
+            manager.retrieve(builder, stackOp2, HardwareRegister.EAX);
+        } else {
+            builder.append("mov ")
+                    .append(op2)
+                    .append(", ")
+                    .append(HardwareRegister.EAX)
+                    .append('\n');
+        }
+
+        builder.append("div ").append(op1 instanceof HardwareRegister ? op1 : HardwareRegister.R15D).append('\n');
+
+        HardwareRegister resultRegister = mod ? HardwareRegister.EDX : HardwareRegister.EAX;
+
+        if (target instanceof HardwareRegister) {
+            builder.append("mov ")
+                    .append(resultRegister)
+                    .append(", ")
+                    .append(target);
+        } else {
+            this.manager.store(builder, resultRegister, (StackRegister) target);
+        }
+
     }
 }
