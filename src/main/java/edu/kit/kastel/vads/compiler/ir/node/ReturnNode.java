@@ -1,9 +1,11 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
-import edu.kit.kastel.vads.compiler.backend.aasm.HardwareRegister;
-import edu.kit.kastel.vads.compiler.backend.aasm.StackManager;
-import edu.kit.kastel.vads.compiler.backend.aasm.StackRegister;
+import edu.kit.kastel.vads.compiler.backend.x86.HardwareRegister;
+import edu.kit.kastel.vads.compiler.backend.x86.StackManager;
+import edu.kit.kastel.vads.compiler.backend.x86.StackRegister;
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Mov;
+
 import java.util.Map;
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 
@@ -16,16 +18,7 @@ public final class ReturnNode extends Node {
 
     public void toASM(StringBuilder builder, Map<Node, Register> registers, StackManager manager) {
         Register src = registers.get(predecessorSkipProj(this, ReturnNode.RESULT));
-        if (src instanceof HardwareRegister) {
-            builder.append("mov ")
-                    .append(src)
-                    .append(", ")
-                    .append("%eax")
-                    .append("\n");
-        } else {
-            manager.retrieve(builder, (StackRegister) src, HardwareRegister.EAX);
-        }
-
+        new x86Mov(src, HardwareRegister.EAX).appendInstruction(builder);
         manager.destruct(builder);
         builder.append("ret");
 

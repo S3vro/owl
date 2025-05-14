@@ -1,3 +1,0 @@
-int main() {
-int num = 0x80000000;
-return ((-num)/-(-num/-num));}

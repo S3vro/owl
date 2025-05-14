@@ -1,4 +1,4 @@
-package edu.kit.kastel.vads.compiler.backend.aasm;
+package edu.kit.kastel.vads.compiler.backend.x86;
 
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.regalloc.RegisterAllocator;
@@ -58,8 +58,9 @@ public class NaiveRegisterAllocator implements RegisterAllocator {
             } else {
                 // if no more registers spill
                 int stackId = this.id++;
-                this.stackManager.addToStack(new StackRegister(stackId));
-                this.registers.put(node, new StackRegister(stackId));
+                StackRegister register = new StackRegister(stackId,0);
+                this.stackManager.addToStack(register);
+                this.registers.put(node, register);
             }
 
         }

@@ -1,7 +1,12 @@
 package edu.kit.kastel.vads.compiler.backend.aasm;
 
+import edu.kit.kastel.vads.compiler.backend.x86.HardwareRegister;
+import edu.kit.kastel.vads.compiler.backend.x86.NaiveRegisterAllocator;
+import edu.kit.kastel.vads.compiler.backend.x86.StackManager;
+import edu.kit.kastel.vads.compiler.backend.x86.StackRegister;
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.regalloc.RegisterAllocator;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.*;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.AddNode;
 import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
@@ -20,10 +25,7 @@ import edu.kit.kastel.vads.compiler.ir.node.SubNode;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 
@@ -67,11 +69,7 @@ public class CodeGenerator {
         }
 
         switch (node) {
-            case AddNode add -> binary(builder, registers, add, "add");
-            case SubNode sub -> binary(builder, registers, sub, "sub");
-            case MulNode mul -> binary(builder, registers, mul, "imul");
-            case DivNode div -> divOrMod(builder, registers, div, false);
-            case ModNode mod -> divOrMod(builder, registers, mod, true);
+            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _ -> binary(builder, node, registers);
             case ReturnNode r -> r.toASM(builder, registers, manager);
             case ConstIntNode c -> c.toASM(builder, registers, manager);
             case Phi _ -> throw new UnsupportedOperationException("phi");
@@ -83,83 +81,20 @@ public class CodeGenerator {
         builder.append("\n");
     }
 
-    private void binary(
-        StringBuilder builder,
-        Map<Node, Register> registers,
-        BinaryOperationNode node,
-        String opcode
-    ) {
-
+    private void binary(StringBuilder builder, Node node, Map<Node, Register> registers) {
         Register op1 = registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT));
         Register op2 = registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT));
         Register target = registers.get(node);
 
+        x86Instruction instruction = switch (node) {
+            case AddNode _ -> new x86Add(op1, op2, target);
+            case SubNode _ -> new x86Sub(op1, op2, target);
+            case MulNode _ -> new x86Mul(op1, op2, target);
+            case DivNode _ -> new x86Div(op1, op2, target, false);
+            case ModNode _ -> new x86Div(op1, op2, target, true);
+            default -> throw new IllegalStateException("Unexpected value: " + node);
+        };
 
-        if (op1 instanceof StackRegister stackOp1) {
-            this.manager.retrieve(builder, stackOp1, HardwareRegister.EAX);
-        }
-
-        if (op2 instanceof StackRegister stackOp2) {
-            manager.retrieve(builder, stackOp2, HardwareRegister.R15D);
-        }
-
-        if (!op2.equals(target)) {
-            Register localTarget = target;
-            if (target instanceof StackRegister) {
-                localTarget = HardwareRegister.R15D;
-            }
-            builder.append("mov ")
-                    .append(op2 instanceof HardwareRegister ? op2 : HardwareRegister.R15D)
-                    .append(", ")
-                    .append(localTarget)
-                    .append("\n");
-        }
-
-        builder.append(opcode)
-                .append(' ')
-                .append(op1 instanceof HardwareRegister ? op1 : HardwareRegister.EAX)
-                .append(", ")
-                .append(target instanceof HardwareRegister ? target : HardwareRegister.R15D);
-
-        if (target instanceof StackRegister targetStack) {
-            manager.store(builder, HardwareRegister.R15D, targetStack);
-        }
-    }
-
-    private void divOrMod(StringBuilder builder, Map<Node,Register> registers, BinaryOperationNode node, boolean mod) {
-        Register op1 = registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT));
-        Register op2 = registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT));
-        Register target = registers.get(node);
-
-        if (op1 instanceof StackRegister stackOp1) {
-            this.manager.retrieve(builder, stackOp1, HardwareRegister.R15D);
-        }
-
-        if (op2 instanceof StackRegister stackOp2) {
-            manager.retrieve(builder, stackOp2, HardwareRegister.EAX);
-        } else {
-            builder.append("mov ")
-                    .append(op2)
-                    .append(", ")
-                    .append(HardwareRegister.EAX)
-                    .append('\n');
-        }
-
-        //Sign extend into EDX
-        builder.append("cdq").append('\n');
-
-        builder.append("idiv ").append(op1 instanceof HardwareRegister ? op1 : HardwareRegister.R15D).append('\n');
-
-        HardwareRegister resultRegister = mod ? HardwareRegister.EDX : HardwareRegister.EAX;
-
-        if (target instanceof HardwareRegister) {
-            builder.append("mov ")
-                    .append(resultRegister)
-                    .append(", ")
-                    .append(target);
-        } else {
-            this.manager.store(builder, resultRegister, (StackRegister) target);
-        }
-
+        instruction.appendInstruction(builder);
     }
 }
