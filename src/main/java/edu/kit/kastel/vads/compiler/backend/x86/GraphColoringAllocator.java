@@ -46,7 +46,9 @@ public class GraphColoringAllocator implements RegisterAllocator {
         visited.add(graph.endBlock());
         scan(graph.endBlock(), visited);
 
-        System.out.println(registers);
+        registers.forEach((node, register) -> {
+            System.out.println(variables.get(node) + ">" + register);
+        });
 
         return this.registers;
     }

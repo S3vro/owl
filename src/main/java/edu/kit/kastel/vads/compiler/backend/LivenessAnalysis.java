@@ -54,12 +54,11 @@ public class LivenessAnalysis {
             this.liveAt.put(graphSequence.get(i), new HashSet<>());
             switch(graphSequence.get(i)) {
                 case ReturnNode r -> {
-                    int nodeId = this.varibaleId.get(
                             r.predecessors().stream()
                                     .filter(LivenessAnalysis::relevant)
-                                    .findFirst().get()
-                    );
-                    this.liveAt.computeIfAbsent(r, _ -> new HashSet<>()).add(nodeId);
+                                    .findFirst().ifPresent(node -> {
+                                        this.liveAt.computeIfAbsent(r, _ -> new HashSet<>()).add(varibaleId.get(node));
+                                    });
                 }
                 case ConstIntNode c -> {
                     int nodeId = this.varibaleId.get(c);

@@ -22,14 +22,26 @@ public record x86Mul(Register op1, Register op2, Register target) implements x86
             localOp2 = HardwareRegister.R15D;
         }
 
+        Register srcOp = localOp1;
+        Register dstOp = localOp2;
+
+        if (localOp1.equals(target)) {
+            srcOp = localOp2;
+            dstOp = localOp1;
+        }
+
+        new x86Mov(dstOp, target instanceof HardwareRegister ? target : HardwareRegister.R15D).appendInstruction(builder);
 
         builder.append("imul")
                 .append(' ')
-                .append(localOp1)
+                .append(srcOp)
                 .append(", ")
-                .append(localOp2)
+                .append(target instanceof HardwareRegister ? target : HardwareRegister.R15D)
                 .append('\n');
 
-        new x86Mov(localOp2, target).appendInstruction(builder);
+        if (target instanceof StackRegister) {
+            new x86Mov(HardwareRegister.R15D, target).appendInstruction(builder);
+        }
+
     }
 }
