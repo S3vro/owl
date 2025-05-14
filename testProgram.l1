@@ -1,0 +1,6 @@
+int main() {
+  int a = 42 - 3;
+  int b = a / 3;
+  int c = a % 3;
+  return b * 3 + c + 3;
+}

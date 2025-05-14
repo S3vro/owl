@@ -1,31 +1,21 @@
 package edu.kit.kastel.vads.compiler.backend.aasm;
 
-import edu.kit.kastel.vads.compiler.backend.x86.HardwareRegister;
-import edu.kit.kastel.vads.compiler.backend.x86.NaiveRegisterAllocator;
-import edu.kit.kastel.vads.compiler.backend.x86.StackManager;
-import edu.kit.kastel.vads.compiler.backend.x86.StackRegister;
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.regalloc.RegisterAllocator;
+import edu.kit.kastel.vads.compiler.backend.x86.GraphColoringAllocator;
+import edu.kit.kastel.vads.compiler.backend.x86.StackManager;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.*;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
-import edu.kit.kastel.vads.compiler.ir.node.AddNode;
-import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
-import edu.kit.kastel.vads.compiler.ir.node.Block;
-import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
-import edu.kit.kastel.vads.compiler.ir.node.DivNode;
-import edu.kit.kastel.vads.compiler.ir.node.ModNode;
-import edu.kit.kastel.vads.compiler.ir.node.MulNode;
-import edu.kit.kastel.vads.compiler.ir.node.Node;
-import edu.kit.kastel.vads.compiler.ir.node.Phi;
-import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
-import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
-import edu.kit.kastel.vads.compiler.ir.node.StartNode;
-import edu.kit.kastel.vads.compiler.ir.node.SubNode;
+import edu.kit.kastel.vads.compiler.ir.node.*;
+import edu.kit.kastel.vads.compiler.ir.util.GraphVizPrinter;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 
@@ -40,8 +30,8 @@ public class CodeGenerator {
 
 
         for (IrGraph graph : program) {
-            //System.out.println(GraphVizPrinter.print(graph));
-            RegisterAllocator allocator = new NaiveRegisterAllocator(this.manager);
+            System.out.println(GraphVizPrinter.print(graph));
+            RegisterAllocator allocator = new GraphColoringAllocator(manager);
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
 
             System.out.println("The stack is using: " + this.manager.getStackSize() + " bytes");

@@ -23,15 +23,14 @@ public record x86BinaryInstruction(Register op1, Register op2, Register target, 
             localOp2 = HardwareRegister.R15D;
         }
 
-        if (!localOp2.equals(target)) {
-            new x86Mov(localOp2, target).appendInstruction(builder);
-        }
 
         builder.append(opcode)
                 .append(' ')
                 .append(localOp1)
                 .append(", ")
-                .append(target)
+                .append(localOp2)
                 .append('\n');
+
+        new x86Mov(localOp2, target).appendInstruction(builder);
     }
 }
