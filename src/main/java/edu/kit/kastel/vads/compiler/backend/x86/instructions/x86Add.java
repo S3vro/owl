@@ -34,7 +34,7 @@ public record x86Add(Register op1, Register op2, Register target) implements x86
 
         builder.append("add")
                 .append(' ')
-                .append(localOp1)
+                .append(srcOp)
                 .append(", ")
                 .append(target)
                 .append('\n');

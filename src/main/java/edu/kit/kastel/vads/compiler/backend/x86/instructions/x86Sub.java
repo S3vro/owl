@@ -21,6 +21,15 @@ public record x86Sub(Register op1, Register op2, Register target) implements x86
             localOp2 = HardwareRegister.R15D;
         }
 
+        if (localOp1.equals(localOp2) && localOp2.equals(target))  {
+            builder.append("mov ")
+                    .append("$0")
+                    .append(", ")
+                    .append(target)
+                    .append('\n');
+            return;
+        }
+
         if (localOp1.equals(target)) {
             //FATAL must neg and use add
             builder.append("neg ").append(localOp1).append('\n');

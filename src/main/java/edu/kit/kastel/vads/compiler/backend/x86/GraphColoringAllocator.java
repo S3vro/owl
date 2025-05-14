@@ -38,18 +38,11 @@ public class GraphColoringAllocator implements RegisterAllocator {
         InferenceGraph inGraph = new InferenceGraph();
         variables = inGraph.generate(graph);
         InferenceGraph.InferenceGraphNode[] order = inGraph.maxCardinalitySearch();
-        System.out.println(Arrays.toString(order));
         colors = inGraph.greedyColor(order);
-        System.out.println(colors);
 
         Set<Node> visited = new HashSet<>();
         visited.add(graph.endBlock());
         scan(graph.endBlock(), visited);
-
-        registers.forEach((node, register) -> {
-            System.out.println(variables.get(node) + ">" + register);
-        });
-
         return this.registers;
     }
 

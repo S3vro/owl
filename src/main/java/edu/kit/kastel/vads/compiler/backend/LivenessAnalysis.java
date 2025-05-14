@@ -20,11 +20,14 @@ public class LivenessAnalysis {
     public  Map<Node, Set<Integer>> getLiveAt(IrGraph graph) {
         this.generateIds(graph);
 
-        for (Node node : this.graphInSequence(graph)) {
-            System.out.println(String.format("%d>%s", varibaleId.get(node), node.toString()));
-        }
+
 
         this.calcLive(this.graphInSequence(graph));
+        /*
+        for (Node node : this.graphInSequence(graph)) {
+            System.out.println(String.format("%d>%s | %s", varibaleId.get(node), node.toString(), liveAt.get(node)));
+        }
+            */
 
         return this.liveAt;
     }
@@ -112,8 +115,6 @@ public class LivenessAnalysis {
                 this.varibaleId.put(ordered.get(i), i);
             }
         }
-
-        System.out.println("All collected Ids: " + varibaleId);
     }
 
     private void scanId(Node node, Set<Node> visited) {

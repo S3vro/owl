@@ -7,7 +7,6 @@ import edu.kit.kastel.vads.compiler.backend.x86.StackManager;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.*;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.*;
-import edu.kit.kastel.vads.compiler.ir.util.GraphVizPrinter;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,7 +29,6 @@ public class CodeGenerator {
 
 
         for (IrGraph graph : program) {
-            System.out.println(GraphVizPrinter.print(graph));
             RegisterAllocator allocator = new GraphColoringAllocator(manager);
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
 

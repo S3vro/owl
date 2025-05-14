@@ -14,7 +14,6 @@ public class InferenceGraph {
     public Map<Node, Integer> generate(IrGraph graph){
         LivenessAnalysis livenessAnalysis = new LivenessAnalysis();
         Map<Node, Set<Integer>> live = livenessAnalysis.getLiveAt(graph);
-        System.out.println(live);
         Map<Node, Integer> varId = livenessAnalysis.getVaribaleId();
 
         varId.forEach((_, integer) -> {
@@ -29,7 +28,6 @@ public class InferenceGraph {
                                         this.connect(new InferenceGraphNode(node),
                                                 new InferenceGraphNode(node2)))));
 
-        System.out.println(adjacencyList);
         return varId;
     }
 
@@ -48,7 +46,6 @@ public class InferenceGraph {
         for (int i = 0; i < nodes.length; i++) {
             InferenceGraphNode v = W.stream().max(Comparator.comparing(InferenceGraphNode::getWeight)).get();
             nodes[i] = v;
-            System.out.println("Added" + v + " current state of W " + W);
             for (InferenceGraphNode node : W) {
                 if (neighbour(v, node)) {
                     node.setWeight(node.getWeight() + 1);
