@@ -1,28 +1,14 @@
 package edu.kit.kastel.vads.compiler.ir;
 
-import edu.kit.kastel.vads.compiler.ir.node.AddNode;
-import edu.kit.kastel.vads.compiler.ir.node.Block;
-import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
-import edu.kit.kastel.vads.compiler.ir.node.DivNode;
-import edu.kit.kastel.vads.compiler.ir.node.ModNode;
-import edu.kit.kastel.vads.compiler.ir.node.MulNode;
-import edu.kit.kastel.vads.compiler.ir.node.Node;
-import edu.kit.kastel.vads.compiler.ir.node.Phi;
-import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
-import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
-import edu.kit.kastel.vads.compiler.ir.node.StartNode;
-import edu.kit.kastel.vads.compiler.ir.node.SubNode;
+import edu.kit.kastel.vads.compiler.ir.node.*;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 class GraphConstructor {
 
-    private final Optimizer optimizer;
+    private final List<Optimizer> optimizer;
     private final IrGraph graph;
     private final Map<Name, Map<Block, Node>> currentDef = new HashMap<>();
     private final Map<Block, Map<Name, Phi>> incompletePhis = new HashMap<>();
@@ -31,12 +17,21 @@ class GraphConstructor {
     private final Set<Block> sealedBlocks = new HashSet<>();
     private Block currentBlock;
 
-    public GraphConstructor(Optimizer optimizer, String name) {
+    public GraphConstructor(List<Optimizer> optimizer, String name) {
         this.optimizer = optimizer;
         this.graph = new IrGraph(name);
         this.currentBlock = this.graph.startBlock();
         // the start block never gets any more predecessors
         sealBlock(this.currentBlock);
+    }
+
+    public Node optimize(Node current) {
+        Node node = current;
+        for (Optimizer opt : this.optimizer) {
+            node = opt.transform(node);
+        }
+
+        return node;
     }
 
     public Node newStart() {
@@ -45,22 +40,22 @@ class GraphConstructor {
     }
 
     public Node newAdd(Node left, Node right) {
-        return this.optimizer.transform(new AddNode(currentBlock(), left, right));
+        return this.optimize(new AddNode(currentBlock(), left, right));
     }
     public Node newSub(Node left, Node right) {
-        return this.optimizer.transform(new SubNode(currentBlock(), left, right));
+        return this.optimize(new SubNode(currentBlock(), left, right));
     }
 
     public Node newMul(Node left, Node right) {
-        return this.optimizer.transform(new MulNode(currentBlock(), left, right));
+        return this.optimize(new MulNode(currentBlock(), left, right));
     }
 
     public Node newDiv(Node left, Node right) {
-        return this.optimizer.transform(new DivNode(currentBlock(), left, right, readCurrentSideEffect()));
+        return this.optimize(new DivNode(currentBlock(), left, right, readCurrentSideEffect()));
     }
 
     public Node newMod(Node left, Node right) {
-        return this.optimizer.transform(new ModNode(currentBlock(), left, right, readCurrentSideEffect()));
+        return this.optimize(new ModNode(currentBlock(), left, right, readCurrentSideEffect()));
     }
 
     public Node newReturn(Node result) {
@@ -70,7 +65,7 @@ class GraphConstructor {
     public Node newConstInt(int value) {
         // always move const into start block, this allows better deduplication
         // and resultingly in better value numbering
-        return this.optimizer.transform(new ConstIntNode(this.graph.startBlock(), value));
+        return this.optimize(new ConstIntNode(this.graph.startBlock(), value));
     }
 
     public Node newSideEffectProj(Node node) {

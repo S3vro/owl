@@ -7,26 +7,13 @@ import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfo;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfoHelper;
-import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
-import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
-import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
-import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
-import edu.kit.kastel.vads.compiler.parser.ast.Tree;
-import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BinaryOperator;
 
@@ -41,7 +28,7 @@ public class SsaTranslation {
     private final FunctionTree function;
     private final GraphConstructor constructor;
 
-    public SsaTranslation(FunctionTree function, Optimizer optimizer) {
+    public SsaTranslation(FunctionTree function, List<Optimizer> optimizer) {
         this.function = function;
         this.constructor = new GraphConstructor(optimizer, function.name().name().asString());
     }
