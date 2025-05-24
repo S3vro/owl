@@ -1,6 +1,5 @@
 package edu.kit.kastel.vads.compiler.backend.regalloc;
 
-import edu.kit.kastel.vads.compiler.backend.LivenessAnalysis;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 
@@ -15,7 +14,6 @@ public class InferenceGraph {
         LivenessAnalysis livenessAnalysis = new LivenessAnalysis();
         Map<Node, Set<Integer>> live = livenessAnalysis.getLiveAt(graph);
         Map<Node, Integer> varId = livenessAnalysis.getVaribaleId();
-        livenessAnalysis.prettyPrint(graph);
 
         varId.forEach((_, integer) -> {
             this.adjacencyList.put(new InferenceGraphNode(integer), new HashSet<>());

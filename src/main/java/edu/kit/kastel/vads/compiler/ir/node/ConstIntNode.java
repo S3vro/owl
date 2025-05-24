@@ -1,22 +1,11 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
-import edu.kit.kastel.vads.compiler.backend.x86.StackManager;
-import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
-import java.util.Map;
-
 public final class ConstIntNode extends Node {
     private final int value;
 
     public ConstIntNode(Block block, int value) {
         super(block);
         this.value = value;
-    }
-
-    public void toASM(StringBuilder builder, Map<Node, Register> registers, StackManager manager) {
-        builder.append("mov ")
-                .append(registers.get(this))
-                .append(", ")
-                .append(value);
     }
 
     public int value() {

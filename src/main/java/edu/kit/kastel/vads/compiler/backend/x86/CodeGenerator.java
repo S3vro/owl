@@ -1,9 +1,7 @@
-package edu.kit.kastel.vads.compiler.backend.aasm;
+package edu.kit.kastel.vads.compiler.backend.x86;
 
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.regalloc.RegisterAllocator;
-import edu.kit.kastel.vads.compiler.backend.x86.GraphColoringAllocator;
-import edu.kit.kastel.vads.compiler.backend.x86.StackManager;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.*;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.*;
@@ -37,8 +35,11 @@ public class CodeGenerator {
             builder.append("\n_")
                     .append(graph.name())
                     .append(":\n");
+
             this.manager.construct(builder);
+
             generateForGraph(graph, builder, registers);
+
             builder.append("\n");
         }
         return builder.toString();
@@ -57,19 +58,33 @@ public class CodeGenerator {
         }
 
         switch (node) {
-            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _ -> binary(builder, node, registers);
-            case ReturnNode r -> r.toASM(builder, registers, manager);
-            case ConstIntNode c -> c.toASM(builder, registers, manager);
+            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _ -> generateBinary(builder, node, registers);
+            case ReturnNode r -> generateReturn(builder, r, registers);
+            case ConstIntNode c -> generateConst(builder, c, registers);
             case Phi _ -> throw new UnsupportedOperationException("phi");
             case Block _, ProjNode _, StartNode _ -> {
                 // do nothing, skip line break
                 return;
             }
         }
-        builder.append("\n");
     }
 
-    private void binary(StringBuilder builder, Node node, Map<Node, Register> registers) {
+    private void generateReturn(StringBuilder builder, Node node, Map<Node, Register> registers) {
+        Register src = registers.get(predecessorSkipProj(node, ReturnNode.RESULT));
+        new x86Mov(src, HardwareRegister.EAX).appendInstruction(builder);
+        manager.destruct(builder);
+        builder.append("ret").append('\n');
+    }
+
+    private void generateConst(StringBuilder builder, ConstIntNode node, Map<Node, Register> registers) {
+        builder.append("mov ")
+        .append(registers.get(node))
+        .append(", ")
+        .append(node.value())
+        .append('\n');
+    }
+
+    private void generateBinary(StringBuilder builder, Node node, Map<Node, Register> registers) {
         Register op1 = registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT));
         Register op2 = registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT));
         Register target = registers.get(node);

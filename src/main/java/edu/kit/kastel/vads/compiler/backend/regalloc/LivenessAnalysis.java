@@ -1,4 +1,4 @@
-package edu.kit.kastel.vads.compiler.backend;
+package edu.kit.kastel.vads.compiler.backend.regalloc;
 
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.*;
@@ -6,7 +6,6 @@ import edu.kit.kastel.vads.compiler.ir.node.*;
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class LivenessAnalysis {
 
@@ -46,7 +45,7 @@ public class LivenessAnalysis {
     }
 
     private void calcLive(List<Node> graphSequence) {
-        for (int i = graphSequence.size()-1; i>=0; i--) {
+        for (int i = graphSequence.size() - 1; i >= 0; i--) {
             Node node = graphSequence.get(i);
 
             // K_1 RULE
@@ -55,7 +54,7 @@ public class LivenessAnalysis {
             // K_2 RULE
 
             if (i < graphSequence.size() - 1) {
-                Set<Integer> liveAtSucc = new HashSet<>(this.liveAt.get(graphSequence.get(i+1)));
+                Set<Integer> liveAtSucc = new HashSet<>(this.liveAt.get(graphSequence.get(i + 1)));
                 liveAtSucc.removeAll(this.defines(node));
                 this.liveAt.get(node).addAll(liveAtSucc);
             }
