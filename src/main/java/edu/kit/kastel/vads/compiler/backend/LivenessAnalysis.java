@@ -11,8 +11,6 @@ public class LivenessAnalysis {
     private final Map<Node, Set<Integer>> liveAt = new HashMap<>();
     private final Map<Node, Integer> varibaleId = new HashMap<>();
 
-    private int id = 0;
-
     public Map<Node, Integer> getVaribaleId() {
         return varibaleId;
     }
@@ -113,18 +111,6 @@ public class LivenessAnalysis {
         for (int i = 0; i < ordered.size(); i++) {
             if (!(ordered.get(i) instanceof ReturnNode)) {
                 this.varibaleId.put(ordered.get(i), i);
-            }
-        }
-    }
-
-    private void scanId(Node node, Set<Node> visited) {
-        if (relevant(node) && !(node instanceof ReturnNode)) {
-            varibaleId.put(node, id++);
-        }
-
-        for (Node predecessors : node.predecessors()) {
-            if (visited.add(predecessors)) {
-                scanId(predecessors, visited);
             }
         }
     }

@@ -9,9 +9,9 @@ public record x86Mov(Register src, Register dst) implements x86Instruction {
         if(src.equals(dst)) return;
 
         builder.append("mov ")
-                .append(src)
-                .append(", ")
                 .append(dst)
+                .append(", ")
+                .append(src)
                 .append('\n');
 
     }

@@ -22,11 +22,12 @@ public record x86Sub(Register op1, Register op2, Register target) implements x86
         }
 
         if (localOp1.equals(localOp2) && localOp2.equals(target))  {
-            builder.append("mov ")
-                    .append("$0")
-                    .append(", ")
-                    .append(target)
-                    .append('\n');
+            builder.append("xor ")
+            .append(target)
+            .append(", ")
+            .append(target)
+            .append('\n');
+
             return;
         }
 
@@ -34,14 +35,14 @@ public record x86Sub(Register op1, Register op2, Register target) implements x86
             //FATAL must neg and use add
             builder.append("neg ").append(localOp1).append('\n');
             new x86Mov(localOp1, target).appendInstruction(builder);
-            builder.append("add ").append(localOp2).append(", ").append(target).append('\n');
+            builder.append("add ").append(target).append(", ").append(localOp2).append('\n');
         } else {
             new x86Mov(localOp2, target).appendInstruction(builder);
             builder.append("sub")
                     .append(' ')
-                    .append(localOp1)
-                    .append(", ")
                     .append(target)
+                    .append(", ")
+                    .append(localOp1)
                     .append('\n');
         }
 

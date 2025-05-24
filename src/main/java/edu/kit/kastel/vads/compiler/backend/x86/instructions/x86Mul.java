@@ -34,9 +34,9 @@ public record x86Mul(Register op1, Register op2, Register target) implements x86
 
         builder.append("imul")
                 .append(' ')
-                .append(srcOp)
-                .append(", ")
                 .append(target instanceof HardwareRegister ? target : HardwareRegister.R15D)
+                .append(", ")
+                .append(srcOp)
                 .append('\n');
 
         if (target instanceof StackRegister) {
