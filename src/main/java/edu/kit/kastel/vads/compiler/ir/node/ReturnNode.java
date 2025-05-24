@@ -2,7 +2,6 @@ package edu.kit.kastel.vads.compiler.ir.node;
 
 import edu.kit.kastel.vads.compiler.backend.x86.HardwareRegister;
 import edu.kit.kastel.vads.compiler.backend.x86.StackManager;
-import edu.kit.kastel.vads.compiler.backend.x86.StackRegister;
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Mov;
 

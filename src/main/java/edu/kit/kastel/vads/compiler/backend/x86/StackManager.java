@@ -28,9 +28,9 @@ public final class StackManager {
 
         if (this.stackSize == 0) return;
 
-        builder.append("push ").append(HardwareRegister.RBP);
+        builder.append("push ").append(HardwareRegister.RBP).append('\n');
 
-        new x86Mov(HardwareRegister.RSP, HardwareRegister.RBP);
+        new x86Mov(HardwareRegister.RSP, HardwareRegister.RBP).appendInstruction(builder);
 
         builder.append("sub ")
                 .append(HardwareRegister.RSP)

@@ -27,6 +27,6 @@ public class StackRegister implements Register {
 
     @Override
     public String toString() {
-        return String.format("[%s+%d]",  HardwareRegister.RSP, this.offset);
+        return String.format("DWORD PTR [%s+%d]",  HardwareRegister.RSP, this.offset);
     }
 }

@@ -3,6 +3,8 @@ package edu.kit.kastel.vads.compiler.backend;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.*;
 
+import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -18,14 +20,7 @@ public class LivenessAnalysis {
     public  Map<Node, Set<Integer>> getLiveAt(IrGraph graph) {
         this.generateIds(graph);
 
-
-
         this.calcLive(this.graphInSequence(graph));
-        /*
-        for (Node node : this.graphInSequence(graph)) {
-            System.out.println(String.format("%d>%s | %s", varibaleId.get(node), node.toString(), liveAt.get(node)));
-        }
-            */
 
         return this.liveAt;
     }
@@ -52,55 +47,17 @@ public class LivenessAnalysis {
 
     private void calcLive(List<Node> graphSequence) {
         for (int i = graphSequence.size()-1; i>=0; i--) {
-            this.liveAt.put(graphSequence.get(i), new HashSet<>());
-            switch(graphSequence.get(i)) {
-                case ReturnNode r -> {
-                            r.predecessors().stream()
-                                    .filter(LivenessAnalysis::relevant)
-                                    .findFirst().ifPresent(node -> {
-                                        this.liveAt.computeIfAbsent(r, _ -> new HashSet<>()).add(varibaleId.get(node));
-                                    });
-                }
-                case ConstIntNode c -> {
-                    int nodeId = this.varibaleId.get(c);
-                    Set<Integer> live = this.liveAt.get(graphSequence.get(i+1)).stream().filter(v -> v != nodeId)
-                            .collect(Collectors.toSet());
-                    this.liveAt.put(c, live);
-                }
-                case BinaryOperationNode b -> {
+            Node node = graphSequence.get(i);
 
-                    List<Node> pred = new ArrayList<>();
+            // K_1 RULE
+            this.liveAt.put(node, this.uses(node));
 
-                    for (Node p: b.predecessors()) {
-                        if (p instanceof StartNode || p instanceof Block) {
-                            continue;
-                        }
-                        if(p instanceof  ProjNode proj) {
-                            if (proj.projectionInfo() == ProjNode.SimpleProjectionInfo.RESULT) {
-                                pred.add(p.predecessor(0));
-                            }
-                            continue;
-                        }
-                        pred.add(p);
-                    }
+            // K_2 RULE
 
-                    if (!pred.isEmpty()) {
-                        int nodeIdOp1 = this.varibaleId.get(pred.getFirst());
-                        this.liveAt.computeIfAbsent(b, _ -> new HashSet<>()).add(nodeIdOp1);
-                    }
-
-                    if (pred.size() > 1) {
-                        int nodeIdOp2 = this.varibaleId.get(pred.get(1));
-                        this.liveAt.get(b).add(nodeIdOp2);
-                    }
-
-
-                    int nodeId = this.varibaleId.get(b);
-                    Set<Integer> live = this.liveAt.get(graphSequence.get(i+1)).stream().filter(v -> v != nodeId)
-                            .collect(Collectors.toSet());
-                    this.liveAt.get(b).addAll(live);
-                }
-                default -> {}
+            if (i < graphSequence.size() - 1) {
+                Set<Integer> liveAtSucc = new HashSet<>(this.liveAt.get(graphSequence.get(i+1)));
+                liveAtSucc.removeAll(this.defines(node));
+                this.liveAt.get(node).addAll(liveAtSucc);
             }
         }
     }
@@ -117,5 +74,42 @@ public class LivenessAnalysis {
 
     private static boolean relevant(Node node) {
         return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block);
+    }
+
+    public void prettyPrint(IrGraph graph) {
+        for (Node node : this.graphInSequence(graph)) {
+            System.out.println(String.format("%d>%s | %s", varibaleId.get(node), node.toString(), liveAt.get(node)));
+        }
+    }
+
+    public Set<Integer> uses(Node node) {
+        
+        return switch (node) {
+            case ReturnNode r -> {
+                Node usedVal = r.predecessor(ReturnNode.RESULT);
+                yield new HashSet<>(Set.of(this.varibaleId.get(usedVal)));
+            }
+
+            case BinaryOperationNode b -> {
+                Node usedVal1 = predecessorSkipProj(b, BinaryOperationNode.LEFT);
+                Node usedVal2 = predecessorSkipProj(b, BinaryOperationNode.RIGHT);
+                Set<Integer> used = new HashSet<>();
+
+                used.add(this.varibaleId.get(usedVal1));
+                used.add(this.varibaleId.get(usedVal2));
+
+                yield used;
+            }
+
+            default -> new HashSet<>();
+        };
+    }
+
+    public Set<Integer> defines(Node node) {
+        return switch (node) {
+            case BinaryOperationNode b -> Set.of(this.varibaleId.get(b));
+            case ConstIntNode c -> Set.of(this.varibaleId.get(c));
+            default -> Set.of();
+        };
     }
 }

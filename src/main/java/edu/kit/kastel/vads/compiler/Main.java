@@ -39,8 +39,7 @@ public class Main {
         }
         List<IrGraph> graphs = new ArrayList<>();
         for (FunctionTree function : program.topLevelTrees()) {
-            SsaTranslation translation = new SsaTranslation(function, List.of(new LocalValueNumbering(),
-                    new ConstantFolding()));
+            SsaTranslation translation = new SsaTranslation(function, List.of(new LocalValueNumbering()));
             graphs.add(translation.translate());
         }
 
