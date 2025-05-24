@@ -86,7 +86,7 @@ public class LivenessAnalysis {
         
         return switch (node) {
             case ReturnNode r -> {
-                Node usedVal = r.predecessor(ReturnNode.RESULT);
+                Node usedVal = predecessorSkipProj(r, ReturnNode.RESULT);
                 yield new HashSet<>(Set.of(this.varibaleId.get(usedVal)));
             }
 
