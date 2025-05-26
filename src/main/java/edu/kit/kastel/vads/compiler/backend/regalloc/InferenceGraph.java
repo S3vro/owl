@@ -13,6 +13,7 @@ public class InferenceGraph {
     public void generate(IrGraph graph){
         LivenessAnalysis livenessAnalysis = new LivenessAnalysis();
         Map<Node, Set<Node>> live = livenessAnalysis.getLiveAt(graph);
+        livenessAnalysis.prettyPrint(graph);
 
         live.keySet().forEach(node -> {
             this.adjacencyList.put(new InferenceGraphNode(node), new HashSet<>());
@@ -27,6 +28,15 @@ public class InferenceGraph {
                 }
             }
         }
+        
+        // Add Edge to live out vars in case the variable is not used
+        livenessAnalysis.getLiveOut().forEach((node, liveOut) -> {
+            for (Node out : liveOut) {
+                if (!out.equals(node)) {
+                    this.connect(new InferenceGraphNode(node), new InferenceGraphNode(out));
+                }
+            }
+        });
     }
 
     public void connect(InferenceGraphNode a, InferenceGraphNode b) {

@@ -10,6 +10,12 @@ import java.util.*;
 public class LivenessAnalysis {
 
     private final Map<Node, Set<Node>> liveAt = new HashMap<>();
+    private final Map<Node, Set<Node>> liveOut = new HashMap<>();
+
+
+    public Map<Node, Set<Node>> getLiveOut() {
+        return this.liveOut;
+    }
 
     public  Map<Node, Set<Node>> getLiveAt(IrGraph graph) {
         this.calcLive(this.graphInSequence(graph));
@@ -48,6 +54,7 @@ public class LivenessAnalysis {
 
             if (i < graphSequence.size() - 1) {
                 Set<Node> liveAtSucc = new HashSet<>(this.liveAt.get(graphSequence.get(i + 1)));
+                this.liveOut.computeIfAbsent(node, _ -> new HashSet<>()).addAll(new HashSet<>(liveAtSucc));
                 liveAtSucc.removeAll(this.defines(node));
                 this.liveAt.get(node).addAll(liveAtSucc);
             }
