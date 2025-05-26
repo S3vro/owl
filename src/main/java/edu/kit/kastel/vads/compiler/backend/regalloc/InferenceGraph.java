@@ -10,24 +10,23 @@ public class InferenceGraph {
 
     private Map<InferenceGraphNode, Set<InferenceGraphNode>> adjacencyList = new HashMap<>();
 
-    public Map<Node, Integer> generate(IrGraph graph){
+    public void generate(IrGraph graph){
         LivenessAnalysis livenessAnalysis = new LivenessAnalysis();
-        Map<Node, Set<Integer>> live = livenessAnalysis.getLiveAt(graph);
-        Map<Node, Integer> varId = livenessAnalysis.getVaribaleId();
+        Map<Node, Set<Node>> live = livenessAnalysis.getLiveAt(graph);
 
-        varId.forEach((_, integer) -> {
-            this.adjacencyList.put(new InferenceGraphNode(integer), new HashSet<>());
+        live.keySet().forEach(node -> {
+            this.adjacencyList.put(new InferenceGraphNode(node), new HashSet<>());
         });
 
-        live.values().forEach(liveTogether ->
-                liveTogether.forEach(node ->
-                        liveTogether.stream()
-                                        .filter(node2 -> !node.equals(node2))
-                                .forEach(node2 ->
-                                        this.connect(new InferenceGraphNode(node),
-                                                new InferenceGraphNode(node2)))));
-
-        return varId;
+        for (Set<Node> liveTogether : live.values()) {
+            for (Node a : liveTogether) {
+                for (Node b : liveTogether) {
+                    if (!a.equals(b)) {
+                        this.connect(new InferenceGraphNode(a), new InferenceGraphNode(b));
+                    }
+                }
+            }
+        }
     }
 
     public void connect(InferenceGraphNode a, InferenceGraphNode b) {
@@ -83,11 +82,11 @@ public class InferenceGraph {
     }
 
     public static class InferenceGraphNode {
-        private final int id;
+        private final Node node;
         private int weight;
 
-        public InferenceGraphNode(int id) {
-            this.id = id;
+        public InferenceGraphNode(Node node) {
+            this.node = node; 
             this.weight = 0;
         }
 
@@ -102,19 +101,19 @@ public class InferenceGraph {
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof InferenceGraphNode other) {
-                return this.id == other.id;
+                return this.node.equals(other.node) ;
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            return id;
+            return node.hashCode();
         }
 
         @Override
         public String toString() {
-            return this.id + "";
+            return node.toString();
         }
     }
 

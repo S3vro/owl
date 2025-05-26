@@ -26,7 +26,6 @@ public class GraphColoringAllocator implements RegisterAllocator {
     );
     private final Map<Node, Register> registers = new HashMap<>();
     private Map<InferenceGraph.InferenceGraphNode, Integer> colors = new HashMap<>();
-    private Map<Node, Integer> variables = new HashMap<>();
     private final StackManager manager;
 
     public GraphColoringAllocator(StackManager manager) {
@@ -36,7 +35,7 @@ public class GraphColoringAllocator implements RegisterAllocator {
     @Override
     public Map<Node, Register> allocateRegisters(IrGraph graph) {
         InferenceGraph inGraph = new InferenceGraph();
-        variables = inGraph.generate(graph);
+        inGraph.generate(graph);
         InferenceGraph.InferenceGraphNode[] order = inGraph.maxCardinalitySearch();
         colors = inGraph.greedyColor(order);
 
@@ -53,7 +52,7 @@ public class GraphColoringAllocator implements RegisterAllocator {
             }
         }
         if (needsRegister(node)) {
-            int registerId = this.colors.get(new InferenceGraph.InferenceGraphNode(this.variables.get(node)));
+            int registerId = this.colors.get(new InferenceGraph.InferenceGraphNode(node));
             if (registerId < 11) {
                 this.registers.put(node, HARDWARE_REGS.get(registerId));
             } else {
