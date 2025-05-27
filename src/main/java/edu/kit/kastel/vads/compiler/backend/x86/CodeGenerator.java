@@ -55,6 +55,8 @@ public class CodeGenerator {
             if (visited.add(predecessor)) {
                 scan(predecessor, visited, builder, registers);
             }
+            if (!(node instanceof Block))
+                scan(node.block(), visited, builder, registers);
         }
 
         switch (node) {
@@ -63,6 +65,7 @@ public class CodeGenerator {
             case ReturnNode r -> generateReturn(builder, r, registers);
             case ConstIntNode c -> generateConst(builder, c, registers);
             case ConstBoolNode _ -> throw new UnsupportedOperationException("const_bool");
+            case JmpNode _, IfNode _ -> throw new UnsupportedOperationException("jmp");
             case Phi _ -> throw new UnsupportedOperationException("phi");
             case Block _, ProjNode _, StartNode _ -> {
                 // do nothing, skip line break

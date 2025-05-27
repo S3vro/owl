@@ -106,7 +106,7 @@ public class Printer {
                 }
                 semicolon();
             }
-            case IfTree(var expr, var then, var orElse) -> {
+            case IfTree(var expr, var then, var orElse, _) -> {
                 print("if (");
                 printTree(expr);
                 print(")");

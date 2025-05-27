@@ -34,6 +34,10 @@ class GraphConstructor {
         return node;
     }
 
+    public void switchBlock(Block block) {
+        this.currentBlock = block;
+    }
+
     public Node newStart() {
         assert currentBlock() == this.graph.startBlock() : "start must be in start block";
         return new StartNode(currentBlock());
@@ -69,10 +73,14 @@ class GraphConstructor {
         return new ReturnNode(currentBlock(), readCurrentSideEffect(), result);
     }
 
+    public Node newIfNode(Node exp) {
+        return new IfNode(currentBlock(), exp);
+    }
+
     public Node newConstInt(int value) {
         // always move const into start block, this allows better deduplication
-        // and resultingly in better value numbering
-        return this.optimize(new ConstIntNode(this.graph.startBlock(), value));
+        // and resultingly in better value numberin
+        return this.optimize(new ConstIntNode(currentBlock(), value));
     }
     public Node newConstBool(boolean value) {
         // always move const into start block, this allows better deduplication
@@ -84,8 +92,16 @@ class GraphConstructor {
         return new ProjNode(currentBlock(), node, ProjNode.SimpleProjectionInfo.SIDE_EFFECT);
     }
 
+    public Node newControlFlowProj(Node node, ProjNode.SimpleProjectionInfo type) {
+        return new ProjNode(currentBlock(), node, type);
+    }
+
     public Node newResultProj(Node node) {
         return new ProjNode(currentBlock(), node, ProjNode.SimpleProjectionInfo.RESULT);
+    }
+
+    public Node newJmp() {
+        return new JmpNode(currentBlock());
     }
 
     public Block currentBlock() {
@@ -176,13 +192,13 @@ class GraphConstructor {
     private Node readSideEffectRecursive(Block block) {
         Node val;
         if (!this.sealedBlocks.contains(block)) {
-            val = newPhi();
+            val = new Phi(block);
             Phi old = this.incompleteSideEffectPhis.put(block, (Phi) val);
             assert old == null : "double readSideEffectRecursive for " + block;
         } else if (block.predecessors().size() == 1) {
             val = readSideEffect(block.predecessors().getFirst().block());
         } else {
-            val = newPhi();
+            val = new Phi(block);
             writeSideEffect(block, val);
             val = addPhiOperands((Phi) val);
         }

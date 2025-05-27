@@ -5,6 +5,8 @@ import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
+import edu.kit.kastel.vads.compiler.ir.node.IfNode;
+import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.Phi;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
@@ -48,6 +50,7 @@ public class YCompPrinter {
                     _ -> Collections.newSetFromMap(new IdentityHashMap<>())
                 )
                 .add(node);
+                prepare(node.block(), seen);
         }
         for (Node predecessor : node.predecessors()) {
             prepare(predecessor, seen);
@@ -167,7 +170,7 @@ public class YCompPrinter {
         StringJoiner result = new StringJoiner("\n");
         List<? extends Node> parents = block.predecessors();
         for (Node parent : parents) {
-            if (parent instanceof ReturnNode) {
+            if (parent instanceof ReturnNode ||parent instanceof JmpNode || parent instanceof IfNode || (parent instanceof ProjNode p && (p.projectionInfo() == SimpleProjectionInfo.CF_0 || p.projectionInfo() == SimpleProjectionInfo.CF_1))) {
                 // Return needs no label
                 result.add(formatControlflowEdge(parent, block, ""));
             } else {
@@ -225,9 +228,11 @@ public class YCompPrinter {
                 } else if (proj.projectionInfo() == SimpleProjectionInfo.RESULT) {
                     yield VcgColor.NORMAL;
                 } else {
-                    yield VcgColor.NORMAL;
+                    yield VcgColor.CONTROL_FLOW;
                 }
             }
+            case IfNode _ -> VcgColor.NORMAL;
+            case JmpNode _ -> VcgColor.CONTROL_FLOW;
             case ReturnNode _ -> VcgColor.CONTROL_FLOW;
             case StartNode _ -> VcgColor.CONTROL_FLOW;
         };
@@ -251,6 +256,8 @@ public class YCompPrinter {
         } else if (node == this.graph.endBlock()) {
             return "end-block";
         }
+        if (node instanceof Block block) 
+            return block.getLabel();
         return node.toString();
     }
 

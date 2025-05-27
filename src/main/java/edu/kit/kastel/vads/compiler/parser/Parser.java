@@ -104,7 +104,7 @@ public class Parser {
     }
 
     private StatementTree parseIf() {
-        this.tokenSource.expectKeyword(KeywordType.IF);
+        Keyword word = this.tokenSource.expectKeyword(KeywordType.IF);
         this.tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
         ExpressionTree e = parseExpression(OperatorType.maxPrecedence());
         this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
@@ -116,7 +116,7 @@ public class Parser {
             orElse = Optional.of(parseStatement());
         }
 
-        return new IfTree(e, then, orElse);
+        return new IfTree(e, then, orElse, word.span().start());
     }
 
     private StatementTree parseDeclaration() {

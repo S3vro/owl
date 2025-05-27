@@ -45,6 +45,7 @@ public class GraphVizPrinter {
         }
         int idx = 0;
         for (Node predecessor : node.predecessors()) {
+            System.out.println(predecessor);
             this.edges.add(new Edge(predecessor, node, idx++));
             prepare(predecessor, seen);
         }

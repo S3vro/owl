@@ -4,6 +4,7 @@ import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
 import edu.kit.kastel.vads.compiler.ir.node.ModNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
+import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfo;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfoHelper;
@@ -228,7 +229,42 @@ public class SsaTranslation {
 
         @Override
         public Optional<Node> visit(IfTree ifTree, SsaTranslation data) {
-            return Optional.empty();
+            pushSpan(ifTree);
+
+            Node exp = ifTree.e().accept(this, data).orElseThrow();
+            Node ifNode = data.constructor.newIfNode(exp);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+
+            Node trueProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_0);
+
+            Block thenBlock = new Block(data.constructor.graph(), "if-true");
+            thenBlock.addPredecessor(trueProj);
+            data.constructor.switchBlock(thenBlock);
+            data.constructor.sealBlock(thenBlock);
+            ifTree.then().accept(this, data);
+            Node jmpNode = data.constructor.newJmp();
+            data.constructor.sealBlock(data.constructor.currentBlock());
+
+            Block afterIf = new Block(data.constructor.graph(), "after-if");
+            if (ifTree.orElse().isPresent()) {
+                Block elseBlock = new Block(data.constructor.graph(), "if-false");
+                elseBlock.addPredecessor(falseProj);
+                data.constructor.switchBlock(elseBlock);
+                data.constructor.sealBlock(elseBlock);
+                ifTree.orElse().get().accept(this, data);
+                Node elseJmp = data.constructor.newJmp();
+                afterIf.addPredecessor(elseJmp);
+                data.constructor.sealBlock(data.constructor.currentBlock());
+            }
+
+            afterIf.addPredecessor(jmpNode);
+            data.constructor.switchBlock(afterIf);
+            data.constructor.sealBlock(afterIf);
+
+            popSpan();
+
+            return NOT_AN_EXPRESSION;
         }
 
     }

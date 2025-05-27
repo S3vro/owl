@@ -4,6 +4,7 @@ import edu.kit.kastel.vads.compiler.backend.x86.CodeGenerator;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.SsaTranslation;
 import edu.kit.kastel.vads.compiler.ir.optimize.LocalValueNumbering;
+import edu.kit.kastel.vads.compiler.ir.util.GraphVizPrinter;
 import edu.kit.kastel.vads.compiler.ir.util.YCompPrinter;
 import edu.kit.kastel.vads.compiler.lexer.Lexer;
 import edu.kit.kastel.vads.compiler.parser.ParseException;
@@ -42,6 +43,10 @@ public class Main {
         for (FunctionTree function : program.topLevelTrees()) {
             SsaTranslation translation = new SsaTranslation(function, List.of(new LocalValueNumbering()));
             graphs.add(translation.translate());
+        }
+        for (IrGraph graph : graphs) {
+            System.out.println(GraphVizPrinter.print(graph));
+            System.out.println(graph.endBlock().predecessors());
         }
 
 
