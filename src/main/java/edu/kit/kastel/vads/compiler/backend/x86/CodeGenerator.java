@@ -54,9 +54,10 @@ public class CodeGenerator {
         for (Node predecessor : node.predecessors()) {
             if (visited.add(predecessor)) {
                 scan(predecessor, visited, builder, registers);
+                if (!(predecessor instanceof Block))
+                    scan(node.block(), visited, builder, registers);
             }
-            if (!(node instanceof Block))
-                scan(node.block(), visited, builder, registers);
+
         }
 
         switch (node) {
