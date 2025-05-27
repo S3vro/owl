@@ -38,14 +38,21 @@ class GraphConstructor {
         assert currentBlock() == this.graph.startBlock() : "start must be in start block";
         return new StartNode(currentBlock());
     }
-
+    public Node newXor(Node left, Node right) {
+        return this.optimize(new XorNode(currentBlock(), left, right));
+    }
+    public Node newBitWiseAnd(Node left, Node right) {
+        return this.optimize(new BitwiseAndNode(currentBlock, left, right));
+    }
+    public Node newLogicalAnd(Node left, Node right) {
+        return this.optimize(new LogicalAndNode(currentBlock, left, right));
+    }
     public Node newAdd(Node left, Node right) {
         return this.optimize(new AddNode(currentBlock(), left, right));
     }
     public Node newSub(Node left, Node right) {
         return this.optimize(new SubNode(currentBlock(), left, right));
     }
-
     public Node newMul(Node left, Node right) {
         return this.optimize(new MulNode(currentBlock(), left, right));
     }
@@ -66,6 +73,11 @@ class GraphConstructor {
         // always move const into start block, this allows better deduplication
         // and resultingly in better value numbering
         return this.optimize(new ConstIntNode(this.graph.startBlock(), value));
+    }
+    public Node newConstBool(boolean value) {
+        // always move const into start block, this allows better deduplication
+        // and resultingly in better value numbering
+        return this.optimize(new ConstBoolNode(this.graph.startBlock(), value));
     }
 
     public Node newSideEffectProj(Node node) {
@@ -102,6 +114,7 @@ class GraphConstructor {
     }
 
 
+    // Implementation of Algorithm 2 from the SSA Paper
     private Node readVariableRecursive(Name variable, Block block) {
         Node val;
         if (!this.sealedBlocks.contains(block)) {

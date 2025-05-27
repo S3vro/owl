@@ -3,11 +3,13 @@ package edu.kit.kastel.vads.compiler.parser.visitor;
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
@@ -81,7 +83,7 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
     }
 
     @Override
-    public R visit(LiteralTree literalTree, T data) {
+    public R visit(IntLiteralTree literalTree, T data) {
         return this.visitor.visit(literalTree, data);
     }
 
@@ -130,5 +132,20 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
 
     protected T accumulate(T data, R value) {
         return data;
+    }
+
+    @Override
+    public R visit(BoolLiteralTree literalTree, T data) {
+        return this.visitor.visit(literalTree, data);
+    }
+
+    @Override
+    public R visit(IfTree ifTree, T data) {
+        R r = ifTree.e().accept(this, data);
+        r = ifTree.then().accept(this, accumulate(data, r));
+        if (ifTree.orElse().isPresent())
+            r = ifTree.orElse().get().accept(this, accumulate(data, r));
+        r = this.visitor.visit(ifTree, accumulate(data, r));
+        return r;
     }
 }

@@ -13,7 +13,6 @@ public class InferenceGraph {
     public void generate(IrGraph graph){
         LivenessAnalysis livenessAnalysis = new LivenessAnalysis();
         Map<Node, Set<Node>> live = livenessAnalysis.getLiveAt(graph);
-        livenessAnalysis.prettyPrint(graph);
 
         live.keySet().forEach(node -> {
             this.adjacencyList.put(new InferenceGraphNode(node), new HashSet<>());

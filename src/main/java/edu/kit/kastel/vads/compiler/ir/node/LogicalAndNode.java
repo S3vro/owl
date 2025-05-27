@@ -1,7 +1,8 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
-public final class MulNode extends BinaryOperationNode {
-    public MulNode(Block block, Node left, Node right) {
+public final class LogicalAndNode extends BinaryOperationNode{
+
+    public LogicalAndNode(Block block, Node left, Node right) {
         super(block, left, right);
     }
 
@@ -16,3 +17,5 @@ public final class MulNode extends BinaryOperationNode {
         return commutativeHashCode(this);
     }
 }
+
+

@@ -13,13 +13,15 @@ import edu.kit.kastel.vads.compiler.lexer.Token;
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ExpressionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
@@ -29,8 +31,13 @@ import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.type.BasicType;
 
+import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class Parser {
     private final TokenSource tokenSource;
@@ -75,39 +82,75 @@ public class Parser {
 
     private StatementTree parseStatement() {
         StatementTree statement;
-        if (this.tokenSource.peek().isKeyword(KeywordType.INT)) {
+        List<KeywordType> types = EnumSet.allOf(BasicType.class).stream().map(BasicType::getKeywordType).toList();
+
+        // If type is found -> declaration
+        if (types.stream().anyMatch(e -> this.tokenSource.peek().isKeyword(e))) {
             statement = parseDeclaration();
         } else if (this.tokenSource.peek().isKeyword(KeywordType.RETURN)) {
             statement = parseReturn();
-        } else {
+        
+        } else if (this.tokenSource.peek().isSeparator(SeparatorType.BRACE_OPEN)) {
+            return parseBlock();
+        }
+        else if (this.tokenSource.peek().isKeyword(KeywordType.IF)) {
+            return parseIf();
+        }else {
             statement = parseSimple();
         }
+
         this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
         return statement;
     }
 
+    private StatementTree parseIf() {
+        this.tokenSource.expectKeyword(KeywordType.IF);
+        this.tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
+        ExpressionTree e = parseExpression(OperatorType.maxPrecedence());
+        this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+        StatementTree then = parseStatement();
+        Optional<StatementTree> orElse = Optional.empty();
+
+        if (this.tokenSource.peek().isKeyword(KeywordType.ELSE)) {
+            this.tokenSource.expectKeyword(KeywordType.ELSE);
+            orElse = Optional.of(parseStatement());
+        }
+
+        return new IfTree(e, then, orElse);
+    }
+
     private StatementTree parseDeclaration() {
-        Keyword type = this.tokenSource.expectKeyword(KeywordType.INT);
+        Keyword type = this.tokenSource.expectType();
         Identifier ident = this.tokenSource.expectIdentifier();
         ExpressionTree expr = null;
         if (this.tokenSource.peek().isOperator(OperatorType.ASSIGN)) {
             this.tokenSource.expectOperator(OperatorType.ASSIGN);
-            expr = parseExpression();
+            expr = parseExpression(OperatorType.maxPrecedence());
         }
-        return new DeclarationTree(new TypeTree(BasicType.INT, type.span()), name(ident), expr);
+        return new DeclarationTree(new TypeTree(this.toType(type), type.span()), name(ident), expr);
     }
 
     private StatementTree parseSimple() {
         LValueTree lValue = parseLValue();
         Operator assignmentOperator = parseAssignmentOperator();
-        ExpressionTree expression = parseExpression();
+        ExpressionTree expression = parseExpression(OperatorType.maxPrecedence());
         return new AssignmentTree(lValue, assignmentOperator, expression);
     }
 
     private Operator parseAssignmentOperator() {
         if (this.tokenSource.peek() instanceof Operator op) {
             return switch (op.type()) {
-                case ASSIGN, ASSIGN_DIV, ASSIGN_MINUS, ASSIGN_MOD, ASSIGN_MUL, ASSIGN_PLUS -> {
+                case ASSIGN, 
+                        ASSIGN_DIV, 
+                        ASSIGN_MINUS, 
+                        ASSIGN_MOD, 
+                        ASSIGN_MUL, 
+                        ASSIGN_PLUS, 
+                        ASSIGN_XOR, 
+                        ASSIGN_AND, 
+                        ASSIGN_LSHIFT, 
+                        ASSIGN_RSHIFT, 
+                        ASSIGN_OR -> {
                     this.tokenSource.consume();
                     yield op;
                 }
@@ -130,31 +173,20 @@ public class Parser {
 
     private StatementTree parseReturn() {
         Keyword ret = this.tokenSource.expectKeyword(KeywordType.RETURN);
-        ExpressionTree expression = parseExpression();
+        ExpressionTree expression = parseExpression(OperatorType.maxPrecedence());
         return new ReturnTree(expression, ret.span().start());
     }
 
-    private ExpressionTree parseExpression() {
-        ExpressionTree lhs = parseTerm();
+    private ExpressionTree parseExpression(int precedence) {
+        ExpressionTree lhs = precedence == 0 ? parseFactor() : parseExpression(precedence - 1);
         while (true) {
-            if (this.tokenSource.peek() instanceof Operator(var type, _)
-                && (type == OperatorType.PLUS || type == OperatorType.MINUS)) {
-                this.tokenSource.consume();
-                lhs = new BinaryOperationTree(lhs, parseTerm(), type);
-            } else {
-                return lhs;
-            }
-        }
-    }
-
-    private ExpressionTree parseTerm() {
-        ExpressionTree lhs = parseFactor();
-        while (true) {
-            if (this.tokenSource.peek() instanceof Operator(var type, _)
-                && (type == OperatorType.MUL || type == OperatorType.DIV || type == OperatorType.MOD)) {
-                this.tokenSource.consume();
-                lhs = new BinaryOperationTree(lhs, parseFactor(), type);
-            } else {
+            if (this.tokenSource.peek() instanceof Operator(OperatorType type, _) 
+                && (type.getPrecedence() == precedence)) {
+                    this.tokenSource.consume();
+                    ExpressionTree rhs = precedence == 0 ? parseFactor() : parseExpression(precedence - 1);
+                    lhs = new BinaryOperationTree(lhs, rhs, type);
+            }                 
+            else {
                 return lhs;
             }
         }
@@ -164,7 +196,7 @@ public class Parser {
         return switch (this.tokenSource.peek()) {
             case Separator(var type, _) when type == SeparatorType.PAREN_OPEN -> {
                 this.tokenSource.consume();
-                ExpressionTree expression = parseExpression();
+                ExpressionTree expression = parseExpression(OperatorType.maxPrecedence());
                 this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
                 yield expression;
             }
@@ -176,9 +208,22 @@ public class Parser {
                 this.tokenSource.consume();
                 yield new IdentExpressionTree(name(ident));
             }
+            case Keyword(KeywordType type, Span span) -> {
+                if (type == KeywordType.TRUE) {
+                    this.tokenSource.consume();
+                    yield new BoolLiteralTree(true, span);
+                }
+                
+                if (type == KeywordType.FALSE) {
+                    this.tokenSource.consume();
+                    yield new BoolLiteralTree(false, span);
+                }
+
+                throw new ParseException("keyword " + type + " is not allowed here");
+            }
             case NumberLiteral(String value, int base, Span span) -> {
                 this.tokenSource.consume();
-                yield new LiteralTree(value, base, span);
+                yield new IntLiteralTree(value, base, span);
             }
             case Token t -> throw new ParseException("invalid factor " + t);
         };
@@ -186,5 +231,13 @@ public class Parser {
 
     private static NameTree name(Identifier ident) {
         return new NameTree(Name.forIdentifier(ident), ident.span());
+    }
+
+    private BasicType toType(Keyword word) {
+        Map<KeywordType, BasicType> mapped = EnumSet.allOf(BasicType.class).stream()
+                                                    .collect(Collectors
+                                                            .toMap(e -> e.getKeywordType(), e -> e));
+        
+        return mapped.get(word.type());
     }
 }

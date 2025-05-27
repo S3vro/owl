@@ -74,6 +74,8 @@ public class SsaTranslation {
                 case ASSIGN_MINUS -> data.constructor::newSub;
                 case ASSIGN_PLUS -> data.constructor::newAdd;
                 case ASSIGN_MUL -> data.constructor::newMul;
+                case ASSIGN_XOR -> data.constructor::newXor;
+                case ASSIGN_AND -> data.constructor::newBitWiseAnd;
                 case ASSIGN_DIV -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case ASSIGN_MOD -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
                 case ASSIGN -> null;
@@ -103,6 +105,9 @@ public class SsaTranslation {
                 case MINUS -> data.constructor.newSub(lhs, rhs);
                 case PLUS -> data.constructor.newAdd(lhs, rhs);
                 case MUL -> data.constructor.newMul(lhs, rhs);
+                case BITWISE_XOR -> data.constructor.newXor(lhs, rhs);
+                case BITWISE_AND -> data.constructor.newBitWiseAnd(lhs, rhs);
+                case LOGICAL_AND -> data.constructor.newLogicalAnd(lhs, rhs);
                 case DIV -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case MOD -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
                 default ->
@@ -156,9 +161,17 @@ public class SsaTranslation {
         }
 
         @Override
-        public Optional<Node> visit(LiteralTree literalTree, SsaTranslation data) {
+        public Optional<Node> visit(IntLiteralTree literalTree, SsaTranslation data) {
             pushSpan(literalTree);
             Node node = data.constructor.newConstInt((int) literalTree.parseValue().orElseThrow());
+            popSpan();
+            return Optional.of(node);
+        }
+
+        @Override
+        public Optional<Node> visit(BoolLiteralTree literalTree, SsaTranslation data) {
+            pushSpan(literalTree);
+            Node node = data.constructor.newConstBool(literalTree.value());
             popSpan();
             return Optional.of(node);
         }
@@ -212,6 +225,12 @@ public class SsaTranslation {
             data.constructor.writeCurrentSideEffect(projSideEffect);
             return data.constructor.newResultProj(divMod);
         }
+
+        @Override
+        public Optional<Node> visit(IfTree ifTree, SsaTranslation data) {
+            return Optional.empty();
+        }
+
     }
 
 

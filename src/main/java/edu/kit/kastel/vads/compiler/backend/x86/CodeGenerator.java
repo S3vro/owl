@@ -58,9 +58,11 @@ public class CodeGenerator {
         }
 
         switch (node) {
-            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _ -> generateBinary(builder, node, registers);
+            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _, XorNode _, BitwiseAndNode _ -> generateBinary(builder, node, registers);
+            case LogicalAndNode _ -> throw new UnsupportedOperationException("logical and");
             case ReturnNode r -> generateReturn(builder, r, registers);
             case ConstIntNode c -> generateConst(builder, c, registers);
+            case ConstBoolNode _ -> throw new UnsupportedOperationException("const_bool");
             case Phi _ -> throw new UnsupportedOperationException("phi");
             case Block _, ProjNode _, StartNode _ -> {
                 // do nothing, skip line break
@@ -90,9 +92,11 @@ public class CodeGenerator {
         Register target = registers.get(node);
 
         x86Instruction instruction = switch (node) {
-            case AddNode _ -> new x86Add(op1, op2, target);
+            case AddNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.ADD);
+            case MulNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.IMUL);
+            case XorNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.XOR);
+            case BitwiseAndNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.AND);
             case SubNode _ -> new x86Sub(op1, op2, target);
-            case MulNode _ -> new x86Mul(op1, op2, target);
             case DivNode _ -> new x86Div(op1, op2, target, false);
             case ModNode _ -> new x86Div(op1, op2, target, true);
             default -> throw new IllegalStateException("Unexpected value: " + node);

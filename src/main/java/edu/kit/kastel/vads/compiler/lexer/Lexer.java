@@ -41,6 +41,8 @@ public class Lexer {
             case '*' -> singleOrAssign(OperatorType.MUL, OperatorType.ASSIGN_MUL);
             case '/' -> singleOrAssign(OperatorType.DIV, OperatorType.ASSIGN_DIV);
             case '%' -> singleOrAssign(OperatorType.MOD, OperatorType.ASSIGN_MOD);
+            case '^' -> singleOrAssign(OperatorType.BITWISE_XOR, OperatorType.ASSIGN_XOR);
+            case '&' -> singleOrDoubleOrAssign('&', OperatorType.BITWISE_AND, OperatorType.LOGICAL_AND, OperatorType.ASSIGN_AND);
             case '=' -> new Operator(OperatorType.ASSIGN, buildSpan(1));
             default -> {
                 if (isIdentifierChar(peek())) {
@@ -186,6 +188,18 @@ public class Lexer {
 
     private boolean isHex(char c) {
         return isNumeric(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+    }
+
+    private Token singleOrDoubleOrAssign(char op, OperatorType single, OperatorType double_t, OperatorType assign) {
+        if (hasMore(1) && peek(1) == '=') {
+            return new Operator(assign, buildSpan(2));
+        }
+
+        if (hasMore(1) && peek(1) == op) {
+            return new Operator(double_t, buildSpan(2));
+        }
+
+        return new Operator(single, buildSpan(1));
     }
 
     private Token singleOrAssign(OperatorType single, OperatorType assign) {

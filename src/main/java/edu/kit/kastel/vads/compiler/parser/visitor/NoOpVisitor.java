@@ -3,11 +3,13 @@ package edu.kit.kastel.vads.compiler.parser.visitor;
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
@@ -49,7 +51,7 @@ public interface NoOpVisitor<T> extends Visitor<T, Unit> {
     }
 
     @Override
-    default Unit visit(LiteralTree literalTree, T data) {
+    default Unit visit(IntLiteralTree literalTree, T data) {
         return Unit.INSTANCE;
     }
 
@@ -80,6 +82,16 @@ public interface NoOpVisitor<T> extends Visitor<T, Unit> {
 
     @Override
     default Unit visit(TypeTree typeTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(BoolLiteralTree literalTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(IfTree literalTree, T data) {
         return Unit.INSTANCE;
     }
 }
