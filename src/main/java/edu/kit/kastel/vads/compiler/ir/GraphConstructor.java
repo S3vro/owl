@@ -5,6 +5,7 @@ import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 class GraphConstructor {
 
@@ -51,6 +52,9 @@ class GraphConstructor {
     public Node newLogicalAnd(Node left, Node right) {
         return this.optimize(new LogicalAndNode(currentBlock, left, right));
     }
+    public Node newLogicalEqual(Node left, Node right) {
+        return this.optimize(new LogicalEqualNode(currentBlock, left, right));
+    }
     public Node newAdd(Node left, Node right) {
         return this.optimize(new AddNode(currentBlock(), left, right));
     }
@@ -73,8 +77,8 @@ class GraphConstructor {
         return new ReturnNode(currentBlock(), readCurrentSideEffect(), result);
     }
 
-    public Node newIfNode(Node exp) {
-        return new IfNode(currentBlock(), exp);
+    public Node newIfNode(Node exp, Block thenBlock, Block elseBlock) {
+        return new IfNode(currentBlock(), exp, thenBlock, elseBlock);
     }
 
     public Node newConstInt(int value) {
@@ -100,10 +104,13 @@ class GraphConstructor {
         return new ProjNode(currentBlock(), node, ProjNode.SimpleProjectionInfo.RESULT);
     }
 
-    public Node newJmp() {
-        return new JmpNode(currentBlock());
+    public Node newJmp(Block target) {
+        return new JmpNode(currentBlock(), target);
     }
 
+    public Node newUndef(List<? extends Node> node) {
+        return new UndefNode(currentBlock(), (Node[]) node.toArray());
+    }
     public Block currentBlock() {
         return this.currentBlock;
     }
@@ -134,12 +141,12 @@ class GraphConstructor {
     private Node readVariableRecursive(Name variable, Block block) {
         Node val;
         if (!this.sealedBlocks.contains(block)) {
-            val = newPhi();
+            val = new Phi(block);
             this.incompletePhis.computeIfAbsent(block, _ -> new HashMap<>()).put(variable, (Phi) val);
         } else if (block.predecessors().size() == 1) {
             val = readVariable(variable, block.predecessors().getFirst().block());
         } else {
-            val = newPhi();
+            val = new Phi(block);
             writeVariable(variable, block, val);
             val = addPhiOperands(variable, (Phi) val);
         }
@@ -155,17 +162,35 @@ class GraphConstructor {
     }
 
     Node tryRemoveTrivialPhi(Phi phi) {
-        // TODO: the paper shows how to remove trivial phis.
-        // as this is not a problem in Lab 1 and it is just
-        // a simplification, we recommend to implement this
-        // part yourself.
-        return phi;
+        Node same = null;
+        for (Node op  : phi.predecessors()) {
+            if (op.equals(same) || op.equals(phi)) {
+                continue;
+            }
+            if(same != null) {
+                return phi;
+            }
+
+            same = op;
+        }
+        if (same == null) {
+            same = newUndef(phi.predecessors());
+        }
+        phi.replaceBy(same);
+        for (Node use : phi.users()) {
+            if (use instanceof Phi oPhi) {
+                tryRemoveTrivialPhi(oPhi);
+            }
+        }
+        return same;
     }
 
     void sealBlock(Block block) {
         for (Map.Entry<Name, Phi> entry : this.incompletePhis.getOrDefault(block, Map.of()).entrySet()) {
             addPhiOperands(entry.getKey(), entry.getValue());
         }
+        // TODO: Maybe need to close incompleteSideEffectPhis
+
         this.sealedBlocks.add(block);
     }
 

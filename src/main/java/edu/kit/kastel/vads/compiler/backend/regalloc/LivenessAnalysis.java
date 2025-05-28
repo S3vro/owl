@@ -37,6 +37,9 @@ public class LivenessAnalysis {
         for (Node predecessor : node.predecessors()) {
             if (visited.add(predecessor)) {
                 scan(predecessor, visited, nodesInSequence);
+                if (!(predecessor instanceof Block)&& visited.add(predecessor.block())) {
+                    scan(predecessor.block(), visited, nodesInSequence);
+                }
             }
         }
 

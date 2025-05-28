@@ -43,7 +43,12 @@ public class Lexer {
             case '%' -> singleOrAssign(OperatorType.MOD, OperatorType.ASSIGN_MOD);
             case '^' -> singleOrAssign(OperatorType.BITWISE_XOR, OperatorType.ASSIGN_XOR);
             case '&' -> singleOrDoubleOrAssign('&', OperatorType.BITWISE_AND, OperatorType.LOGICAL_AND, OperatorType.ASSIGN_AND);
-            case '=' -> new Operator(OperatorType.ASSIGN, buildSpan(1));
+            case '=' -> {
+                if (hasMore(1) && peek(1) == '=') {
+                    yield new Operator(OperatorType.LOGICAL_EQUAL, buildSpan(2));
+                }
+                yield new Operator(OperatorType.ASSIGN, buildSpan(1));
+            }
             default -> {
                 if (isIdentifierChar(peek())) {
                     if (isNumeric(peek())) {

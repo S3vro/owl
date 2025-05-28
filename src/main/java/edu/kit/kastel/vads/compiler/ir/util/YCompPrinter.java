@@ -13,6 +13,7 @@ import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode.SimpleProjectionInfo;
 import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
 import edu.kit.kastel.vads.compiler.ir.node.StartNode;
+import edu.kit.kastel.vads.compiler.ir.node.UndefNode;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -232,6 +233,7 @@ public class YCompPrinter {
                 }
             }
             case IfNode _ -> VcgColor.NORMAL;
+            case UndefNode _ -> VcgColor.SPECIAL;
             case JmpNode _ -> VcgColor.CONTROL_FLOW;
             case ReturnNode _ -> VcgColor.CONTROL_FLOW;
             case StartNode _ -> VcgColor.CONTROL_FLOW;

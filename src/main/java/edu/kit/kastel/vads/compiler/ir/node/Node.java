@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /// The base class for all nodes.
-public sealed abstract class Node permits BinaryOperationNode, Block, ConstIntNode, Phi, ProjNode, ReturnNode, StartNode, ConstBoolNode, JmpNode, IfNode {
+public sealed abstract class Node permits BinaryOperationNode, Block, ConstIntNode, Phi, ProjNode, ReturnNode, StartNode, ConstBoolNode, JmpNode, IfNode, UndefNode {
     private final IrGraph graph;
     private final Block block;
     private final List<Node> predecessors = new ArrayList<>();
@@ -50,6 +50,10 @@ public sealed abstract class Node permits BinaryOperationNode, Block, ConstIntNo
     }
 
     public final void addPredecessor(Node node) {
+        /* Track the users of a phi for trivial phi removal*/
+        if (node instanceof Phi phi) {
+            phi.addUser(this);
+        }
         this.predecessors.add(node);
         this.graph.registerSuccessor(node, this);
     }

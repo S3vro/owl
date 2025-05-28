@@ -31,7 +31,6 @@ public class Main {
         Path assembly = Path.of(args[1] + ".s");
         Path output = Path.of(args[1]);
         ProgramTree program = lexAndParse(input);
-        System.out.println(Printer.print(program));
         try {
             new SemanticAnalysis(program).analyze();
         } catch (SemanticException e) {
@@ -43,10 +42,6 @@ public class Main {
         for (FunctionTree function : program.topLevelTrees()) {
             SsaTranslation translation = new SsaTranslation(function, List.of(new LocalValueNumbering()));
             graphs.add(translation.translate());
-        }
-        for (IrGraph graph : graphs) {
-            System.out.println(GraphVizPrinter.print(graph));
-            System.out.println(graph.endBlock().predecessors());
         }
 
 

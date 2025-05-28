@@ -16,4 +16,8 @@ public final class Block extends Node {
         return label;
     }
 
+    public String info() {
+        return label;
+    }
+
 }

@@ -4,19 +4,16 @@ import java.util.List;
 
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 
-public record x86Mov(Register src, Register dst) implements x86Instruction {
+public record x86CMP(Register op1, Register op2) implements x86Instruction{
 
     @Override
     public List<x86Instruction> generate() {
-        if(src.equals(dst)) return List.of();
-
-
         return List.of(this);
     }
 
     @Override
     public final String toString() {
-        return String.format("mov %s, %s%n", dst, src);
+        return String.format("cmp %s, %s%n", op1, op2);
     }
-
+    
 }

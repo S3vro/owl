@@ -3,22 +3,28 @@ package edu.kit.kastel.vads.compiler.backend.x86;
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.regalloc.RegisterAllocator;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.*;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Set.x86SetType;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 
 public class CodeGenerator {
 
     private final StackManager manager = new StackManager();
+
+    Map<Block, CodeBlock> blocks = new HashMap<>();
 
     public String generateCode(List<IrGraph> program) throws IOException {
         StringBuilder builder = new StringBuilder();
@@ -38,59 +44,69 @@ public class CodeGenerator {
 
             this.manager.construct(builder);
 
-            generateForGraph(graph, builder, registers);
+            groupInstructionsPerBlock(graph, registers);
+            List<CodeBlock> codeBlocks = orderBlocks(graph.endBlock()).reversed();
+            for (CodeBlock block : codeBlocks) {
+                builder.append(block.print());
+            }
 
             builder.append("\n");
         }
+
         return builder.toString();
     }
 
-    private void generateForGraph(IrGraph graph, StringBuilder builder, Map<Node, Register> registers) {
-        Set<Node> visited = new HashSet<>();
-        scan(graph.endBlock(), visited, builder, registers);
+    private List<x86Instruction> parseNode(Node node, Map<Node, Register> registers) {
+        return switch (node) {
+            case ComparisonNode _ -> generateComp(node, registers);
+            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _, XorNode _, BitwiseAndNode _ -> generateBinary(node, registers);
+            case ReturnNode _ -> generateReturn(node, registers);
+            case ConstIntNode c -> generateConst(c, registers);
+            case IfNode i -> generateIf(i, registers);
+            default -> List.of();
+        };
     }
 
-    private void scan(Node node, Set<Node> visited, StringBuilder builder, Map<Node, Register> registers) {
-        for (Node predecessor : node.predecessors()) {
-            if (visited.add(predecessor)) {
-                scan(predecessor, visited, builder, registers);
-                if (!(predecessor instanceof Block))
-                    scan(node.block(), visited, builder, registers);
-            }
-
-        }
-
-        switch (node) {
-            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _, XorNode _, BitwiseAndNode _ -> generateBinary(builder, node, registers);
-            case LogicalAndNode _ -> throw new UnsupportedOperationException("logical and");
-            case ReturnNode r -> generateReturn(builder, r, registers);
-            case ConstIntNode c -> generateConst(builder, c, registers);
-            case ConstBoolNode _ -> throw new UnsupportedOperationException("const_bool");
-            case JmpNode _, IfNode _ -> throw new UnsupportedOperationException("jmp");
-            case Phi _ -> throw new UnsupportedOperationException("phi");
-            case Block _, ProjNode _, StartNode _ -> {
-                // do nothing, skip line break
-                return;
-            }
-        }
+    private List<x86Instruction> generateIf(IfNode node, Map<Node, Register> registers) {
+        List<x86Instruction> instructions = new ArrayList<>();
+        Register condition = registers.get(node.getCondition());
+        instructions.add(new x86Test(condition));
+        instructions.add(new x86JE(node.getElseBlock().getLabel()));
+        instructions.add(new x86Jump(node.getThenBlock().getLabel()));
+        return instructions;
     }
 
-    private void generateReturn(StringBuilder builder, Node node, Map<Node, Register> registers) {
+    private List<x86Instruction> generateComp(Node node, Map<Node, Register> registers) {
+        List<x86Instruction> instructions = new ArrayList<>();
+        Register op1 = registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT));
+        Register op2 = registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT));
+        Register target = registers.get(node);
+
+        instructions.add(new x86CMP(op1, op2));
+        switch(node) {
+            case LogicalEqualNode _ -> instructions.add(new x86Set(x86SetType.EQ, target));
+            default -> {}
+        };
+         
+        return instructions;
+    }
+
+    private List<x86Instruction> generateReturn(Node node, Map<Node, Register> registers) {
+        List<x86Instruction> instructions = new ArrayList<>();
+
         Register src = registers.get(predecessorSkipProj(node, ReturnNode.RESULT));
-        new x86Mov(src, HardwareRegister.EAX).appendInstruction(builder);
-        manager.destruct(builder);
-        builder.append("ret").append('\n');
+        instructions.add(new x86Mov(src, HardwareRegister.EAX));
+        manager.destruct(instructions);
+        instructions.add(new x86Return());
+
+        return instructions;
     }
 
-    private void generateConst(StringBuilder builder, ConstIntNode node, Map<Node, Register> registers) {
-        builder.append("mov ")
-        .append(registers.get(node))
-        .append(", ")
-        .append(node.value())
-        .append('\n');
+    private List<x86Instruction> generateConst(ConstIntNode node, Map<Node, Register> registers) {
+        return List.of(new x86MovConst(registers.get(node), node.value()));
     }
 
-    private void generateBinary(StringBuilder builder, Node node, Map<Node, Register> registers) {
+    private List<x86Instruction> generateBinary(Node node, Map<Node, Register> registers) {
         Register op1 = registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT));
         Register op2 = registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT));
         Register target = registers.get(node);
@@ -106,6 +122,61 @@ public class CodeGenerator {
             default -> throw new IllegalStateException("Unexpected value: " + node);
         };
 
-        instruction.appendInstruction(builder);
+        return instruction.generate();
     }
+
+    private List<Node> groupInstructionsPerBlock(IrGraph graph, Map<Node, Register> registers) {
+        Set<Node> visited = new HashSet<>();
+        visited.add(graph.endBlock());
+        List<Node> order = new ArrayList<>();
+        scan(graph.endBlock(), visited, order, registers);
+
+        return order;
+    }
+
+    private void scan(Node node, Set<Node> visited, List<Node> order, Map<Node, Register> registers) {
+        for (Node predecessor : node.predecessors()) {
+            if (visited.add(predecessor)) {
+                scan(predecessor, visited, order, registers);
+                if (!(predecessor instanceof Block) && visited.add(node.block()))
+                    scan(node.block(), visited, order, registers);
+            }
+
+        }
+        if (!ignore(node)) {
+            CodeBlock block = this.blocks.computeIfAbsent(node.block(), b -> new CodeBlock(b));
+            if (node instanceof JmpNode jmp) {
+                block.jmp(jmp);
+            } else {
+
+                block.command(parseNode(node, registers));
+            }
+        }
+    }
+
+    private boolean ignore(Node node) {
+        return node instanceof ProjNode || node instanceof StartNode || node instanceof Block;
+    }
+
+    public List<CodeBlock> orderBlocks(Block endBlock) {
+        List<CodeBlock> L = new ArrayList<>();
+        List<CodeBlock> S = new ArrayList<>();
+        S.add(blocks.computeIfAbsent(endBlock, _ -> new CodeBlock(endBlock)));
+
+        while (!S.isEmpty()) {
+            CodeBlock n = S.get(0);
+            if (!L.contains(n))
+                L.add(n);
+            S.remove(0);
+
+            // all pred blocks
+            Set<CodeBlock> preds = n.getBlock().predecessors().stream().map(Node::block).map(b -> blocks.get(b)).collect(Collectors.toSet());
+            for (CodeBlock b : preds) {
+                S.add(b);
+            }
+        }
+    
+        return L;
+    }
+
 }

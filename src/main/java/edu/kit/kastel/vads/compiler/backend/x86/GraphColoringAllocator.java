@@ -49,6 +49,9 @@ public class GraphColoringAllocator implements RegisterAllocator {
         for (Node predecessor : node.predecessors()) {
             if (visited.add(predecessor)) {
                 scan(predecessor, visited);
+                if (!(predecessor instanceof Block) && visited.add(predecessor.block())) {
+                    scan(predecessor.block(), visited);
+                }
             }
         }
         if (needsRegister(node)) {
@@ -66,6 +69,6 @@ public class GraphColoringAllocator implements RegisterAllocator {
     }
 
     private static boolean needsRegister(Node node) {
-        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block || node instanceof ReturnNode);
+        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block || node instanceof ReturnNode || node instanceof JmpNode);
     }
 }

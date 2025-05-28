@@ -109,6 +109,7 @@ public class SsaTranslation {
                 case BITWISE_XOR -> data.constructor.newXor(lhs, rhs);
                 case BITWISE_AND -> data.constructor.newBitWiseAnd(lhs, rhs);
                 case LOGICAL_AND -> data.constructor.newLogicalAnd(lhs, rhs);
+                case LOGICAL_EQUAL -> data.constructor.newLogicalEqual(lhs, rhs);
                 case DIV -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case MOD -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
                 default ->
@@ -230,30 +231,31 @@ public class SsaTranslation {
         @Override
         public Optional<Node> visit(IfTree ifTree, SsaTranslation data) {
             pushSpan(ifTree);
+            Block thenBlock = new Block(data.constructor.graph(), "if_true");
+            Block elseBlock = new Block(data.constructor.graph(), "if_false");
+            Block afterIf = new Block(data.constructor.graph(), "after_if");
 
             Node exp = ifTree.e().accept(this, data).orElseThrow();
-            Node ifNode = data.constructor.newIfNode(exp);
+            Node ifNode = data.constructor.newIfNode(exp, thenBlock, ifTree.orElse().isPresent() ? elseBlock : afterIf);
             data.constructor.sealBlock(data.constructor.currentBlock());
 
             Node trueProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_1);
             Node falseProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_0);
 
-            Block thenBlock = new Block(data.constructor.graph(), "if-true");
+
             thenBlock.addPredecessor(trueProj);
             data.constructor.switchBlock(thenBlock);
             data.constructor.sealBlock(thenBlock);
             ifTree.then().accept(this, data);
-            Node jmpNode = data.constructor.newJmp();
+            Node jmpNode = data.constructor.newJmp(afterIf);
             data.constructor.sealBlock(data.constructor.currentBlock());
 
-            Block afterIf = new Block(data.constructor.graph(), "after-if");
             if (ifTree.orElse().isPresent()) {
-                Block elseBlock = new Block(data.constructor.graph(), "if-false");
                 elseBlock.addPredecessor(falseProj);
                 data.constructor.switchBlock(elseBlock);
                 data.constructor.sealBlock(elseBlock);
                 ifTree.orElse().get().accept(this, data);
-                Node elseJmp = data.constructor.newJmp();
+                Node elseJmp = data.constructor.newJmp(afterIf);
                 afterIf.addPredecessor(elseJmp);
                 data.constructor.sealBlock(data.constructor.currentBlock());
             }
