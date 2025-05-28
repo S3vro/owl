@@ -2,7 +2,6 @@ package edu.kit.kastel.vads.compiler.backend.x86;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Instruction;
 import edu.kit.kastel.vads.compiler.ir.node.Block;

@@ -148,7 +148,6 @@ public class CodeGenerator {
             if (node instanceof JmpNode jmp) {
                 block.jmp(jmp);
             } else {
-
                 block.command(parseNode(node, registers));
             }
         }
@@ -158,6 +157,7 @@ public class CodeGenerator {
         return node instanceof ProjNode || node instanceof StartNode || node instanceof Block;
     }
 
+    /* Implementation of Toposort for Block ordering */
     public List<CodeBlock> orderBlocks(Block endBlock) {
         List<CodeBlock> L = new ArrayList<>();
         List<CodeBlock> S = new ArrayList<>();

@@ -1,6 +1,5 @@
 package edu.kit.kastel.vads.compiler.parser;
 
-import edu.kit.Tuple;
 import edu.kit.kastel.vads.compiler.lexer.Identifier;
 import edu.kit.kastel.vads.compiler.lexer.Keyword;
 import edu.kit.kastel.vads.compiler.lexer.KeywordType;

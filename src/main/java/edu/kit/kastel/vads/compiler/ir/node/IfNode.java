@@ -1,7 +1,5 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
-import java.util.Optional;
-
 public final class IfNode extends Node{
 
     private final Node exp;

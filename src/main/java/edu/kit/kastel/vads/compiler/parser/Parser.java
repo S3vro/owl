@@ -31,7 +31,6 @@ import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.type.BasicType;
 
-import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;

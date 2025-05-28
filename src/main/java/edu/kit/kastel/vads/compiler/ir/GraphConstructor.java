@@ -5,7 +5,6 @@ import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 
 import java.util.*;
-import java.util.Map.Entry;
 
 class GraphConstructor {
 
