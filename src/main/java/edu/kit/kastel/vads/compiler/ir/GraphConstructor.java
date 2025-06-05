@@ -188,7 +188,11 @@ class GraphConstructor {
         for (Map.Entry<Name, Phi> entry : this.incompletePhis.getOrDefault(block, Map.of()).entrySet()) {
             addPhiOperands(entry.getKey(), entry.getValue());
         }
-        // TODO: Maybe need to close incompleteSideEffectPhis
+
+        Phi sideEffectPhi = this.incompleteSideEffectPhis.get(block);
+        if (sideEffectPhi != null) {
+            addPhiOperands(sideEffectPhi);
+        }
 
         this.sealedBlocks.add(block);
     }
