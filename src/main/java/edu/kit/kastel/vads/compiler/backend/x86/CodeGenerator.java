@@ -22,10 +22,12 @@ import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.BitwiseAndNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ComparisonNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
 import edu.kit.kastel.vads.compiler.ir.node.IfNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
+import edu.kit.kastel.vads.compiler.ir.node.LogicalAndNode;
 import edu.kit.kastel.vads.compiler.ir.node.LogicalEqualNode;
 import edu.kit.kastel.vads.compiler.ir.node.ModNode;
 import edu.kit.kastel.vads.compiler.ir.node.MulNode;
@@ -87,9 +89,10 @@ public class CodeGenerator {
     private List<x86Instruction> parseNode(Node node, Map<Node, Register> registers) {
         return switch (node) {
             case ComparisonNode _ -> generateComp(node, registers);
-            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _, XorNode _, BitwiseAndNode _ -> generateBinary(node, registers);
+            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _, XorNode _, BitwiseAndNode _, LogicalAndNode _ -> generateBinary(node, registers);
             case ReturnNode _ -> generateReturn(node, registers);
             case ConstIntNode c -> generateConst(c, registers);
+            case ConstBoolNode c -> generateConst(c, registers);
             case IfNode i -> generateIf(i, registers);
             case Phi p -> generatePhi(p, registers);
             case JmpNode j -> List.of(new x86Jump(j.getTarget().getLabel()));
@@ -145,8 +148,12 @@ public class CodeGenerator {
         return instructions;
     }
 
-    private List<x86Instruction> generateConst(ConstIntNode node, Map<Node, Register> registers) {
-        return List.of(new x86MovConst(registers.get(node), node.value()));
+    private List<x86Instruction> generateConst(Node node, Map<Node, Register> registers) {
+        return switch(node) {
+            case ConstBoolNode b -> List.of(new x86MovConst(registers.get(b), b.value() ? 1 : 0));
+            case ConstIntNode b -> List.of(new x86MovConst(registers.get(b), b.value()));
+            default -> throw new UnsupportedOperationException();
+        };
     }
 
     private List<x86Instruction> generateBinary(Node node, Map<Node, Register> registers) {
@@ -158,7 +165,7 @@ public class CodeGenerator {
             case AddNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.ADD);
             case MulNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.IMUL);
             case XorNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.XOR);
-            case BitwiseAndNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.AND);
+            case BitwiseAndNode _, LogicalAndNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.AND);
             case SubNode _ -> new x86Sub(op1, op2, target);
             case DivNode _ -> new x86Div(op1, op2, target, false);
             case ModNode _ -> new x86Div(op1, op2, target, true);
