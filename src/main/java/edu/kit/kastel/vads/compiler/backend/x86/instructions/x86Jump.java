@@ -10,7 +10,7 @@ public record x86Jump(String target) implements x86Instruction{
     }
 
     @Override
-    public final String toString() {
+    public String toString() {
         return String.format("jmp %s%n", target);
     }
 }

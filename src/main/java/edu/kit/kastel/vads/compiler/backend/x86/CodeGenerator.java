@@ -2,11 +2,41 @@ package edu.kit.kastel.vads.compiler.backend.x86;
 
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.regalloc.RegisterAllocator;
-import edu.kit.kastel.vads.compiler.backend.x86.instructions.*;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86CMP;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Command;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86CommutativeBinaryOperation;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Div;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Instruction;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86JE;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Jump;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Mov;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86MovConst;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Return;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Set;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Set.x86SetType;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Sub;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Test;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
-import edu.kit.kastel.vads.compiler.ir.node.*;
-
+import edu.kit.kastel.vads.compiler.ir.node.AddNode;
+import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
+import edu.kit.kastel.vads.compiler.ir.node.BitwiseAndNode;
+import edu.kit.kastel.vads.compiler.ir.node.Block;
+import edu.kit.kastel.vads.compiler.ir.node.ComparisonNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
+import edu.kit.kastel.vads.compiler.ir.node.DivNode;
+import edu.kit.kastel.vads.compiler.ir.node.IfNode;
+import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
+import edu.kit.kastel.vads.compiler.ir.node.LogicalEqualNode;
+import edu.kit.kastel.vads.compiler.ir.node.ModNode;
+import edu.kit.kastel.vads.compiler.ir.node.MulNode;
+import edu.kit.kastel.vads.compiler.ir.node.Node;
+import edu.kit.kastel.vads.compiler.ir.node.Phi;
+import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
+import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
+import edu.kit.kastel.vads.compiler.ir.node.StartNode;
+import edu.kit.kastel.vads.compiler.ir.node.SubNode;
+import edu.kit.kastel.vads.compiler.ir.node.XorNode;
+import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -18,13 +48,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
-
 public class CodeGenerator {
 
     private final StackManager manager = new StackManager();
 
-    Map<Block, CodeBlock> blocks = new HashMap<>();
+    private Map<Block, BasicBlock> blocks = new HashMap<>();
 
     public String generateCode(List<IrGraph> program) throws IOException {
         StringBuilder builder = new StringBuilder();
@@ -45,8 +73,8 @@ public class CodeGenerator {
             this.manager.construct(builder);
 
             groupInstructionsPerBlock(graph, registers);
-            List<CodeBlock> codeBlocks = orderBlocks(graph.endBlock()).reversed();
-            for (CodeBlock block : codeBlocks) {
+            List<BasicBlock> codeBlocks = orderBlocks(graph.endBlock()).reversed();
+            for (BasicBlock block : codeBlocks) {
                 builder.append(block.print());
             }
 
@@ -63,8 +91,23 @@ public class CodeGenerator {
             case ReturnNode _ -> generateReturn(node, registers);
             case ConstIntNode c -> generateConst(c, registers);
             case IfNode i -> generateIf(i, registers);
+            case Phi p -> generatePhi(p, registers);
+            case JmpNode j -> List.of(new x86Jump(j.getTarget().getLabel()));
             default -> List.of();
         };
+    }
+
+    private List<x86Instruction> generatePhi(Phi p, Map<Node, Register> registers) {
+        for (int i = 0; i < p.predecessors().size(); i++) {
+            Node pred = predecessorSkipProj(p, i);
+            Register src = registers.get(pred);
+            Register target = registers.get(p);
+            BasicBlock pBlock = this.blocks.get(pred.block());
+            pBlock.addPhiInstruction(new x86Mov(src, HardwareRegister.EAX));
+            pBlock.addPhiInstruction(new x86Mov(HardwareRegister.EAX, target));
+        }
+
+        return List.of();
     }
 
     private List<x86Instruction> generateIf(IfNode node, Map<Node, Register> registers) {
@@ -87,7 +130,7 @@ public class CodeGenerator {
             case LogicalEqualNode _ -> instructions.add(new x86Set(x86SetType.EQ, target));
             default -> {}
         };
-         
+
         return instructions;
     }
 
@@ -125,31 +168,24 @@ public class CodeGenerator {
         return instruction.generate();
     }
 
-    private List<Node> groupInstructionsPerBlock(IrGraph graph, Map<Node, Register> registers) {
+    private void groupInstructionsPerBlock(IrGraph graph, Map<Node, Register> registers) {
         Set<Node> visited = new HashSet<>();
         visited.add(graph.endBlock());
-        List<Node> order = new ArrayList<>();
-        scan(graph.endBlock(), visited, order, registers);
+        scan(graph.endBlock(), visited, registers);
 
-        return order;
     }
 
-    private void scan(Node node, Set<Node> visited, List<Node> order, Map<Node, Register> registers) {
+    private void scan(Node node, Set<Node> visited, Map<Node, Register> registers) {
         for (Node predecessor : node.predecessors()) {
             if (visited.add(predecessor)) {
-                scan(predecessor, visited, order, registers);
-                if (!(predecessor instanceof Block) && visited.add(node.block()))
-                    scan(node.block(), visited, order, registers);
+                scan(predecessor, visited, registers);
             }
-
         }
+        if (visited.add(node.block()))
+            scan(node.block(), visited, registers);
         if (!ignore(node)) {
-            CodeBlock block = this.blocks.computeIfAbsent(node.block(), b -> new CodeBlock(b));
-            if (node instanceof JmpNode jmp) {
-                block.jmp(jmp);
-            } else {
-                block.command(parseNode(node, registers));
-            }
+            BasicBlock block = this.blocks.computeIfAbsent(node.block(), BasicBlock::new);
+            block.command(parseNode(node, registers));
         }
     }
 
@@ -158,24 +194,23 @@ public class CodeGenerator {
     }
 
     /* Implementation of Toposort for Block ordering */
-    public List<CodeBlock> orderBlocks(Block endBlock) {
-        List<CodeBlock> L = new ArrayList<>();
-        List<CodeBlock> S = new ArrayList<>();
-        S.add(blocks.computeIfAbsent(endBlock, _ -> new CodeBlock(endBlock)));
+    public List<BasicBlock> orderBlocks(Block endBlock) {
+        List<BasicBlock> L = new ArrayList<>();
+        List<BasicBlock> S = new ArrayList<>();
+        S.add(blocks.computeIfAbsent(endBlock, _ -> new BasicBlock(endBlock)));
 
         while (!S.isEmpty()) {
-            CodeBlock n = S.get(0);
+            BasicBlock n = S.getFirst();
             if (!L.contains(n))
                 L.add(n);
-            S.remove(0);
+            S.removeFirst();
 
             // all pred blocks
-            Set<CodeBlock> preds = n.getBlock().predecessors().stream().map(Node::block).map(b -> blocks.get(b)).collect(Collectors.toSet());
-            for (CodeBlock b : preds) {
-                S.add(b);
-            }
+            Set<BasicBlock> preds = n.getBlock().predecessors().stream().map(Node::block).map(b -> blocks.get(b))
+             .collect(Collectors.toSet());
+            S.addAll(preds);
         }
-    
+
         return L;
     }
 
