@@ -9,6 +9,7 @@ import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Div;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Instruction;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86JE;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Jump;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86LShift;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Mov;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86MovConst;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Return;
@@ -20,6 +21,7 @@ import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.AddNode;
 import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.BitwiseAndNode;
+import edu.kit.kastel.vads.compiler.ir.node.BitwiseOrNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ComparisonNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
@@ -27,8 +29,13 @@ import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
 import edu.kit.kastel.vads.compiler.ir.node.IfNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
+import edu.kit.kastel.vads.compiler.ir.node.LShiftNode;
+import edu.kit.kastel.vads.compiler.ir.node.LessThanNode;
+import edu.kit.kastel.vads.compiler.ir.node.LessThanOrEqualNode;
 import edu.kit.kastel.vads.compiler.ir.node.LogicalAndNode;
 import edu.kit.kastel.vads.compiler.ir.node.LogicalEqualNode;
+import edu.kit.kastel.vads.compiler.ir.node.LogicalOrNode;
+import edu.kit.kastel.vads.compiler.ir.node.LogicalUnequalNode;
 import edu.kit.kastel.vads.compiler.ir.node.ModNode;
 import edu.kit.kastel.vads.compiler.ir.node.MulNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
@@ -89,7 +96,7 @@ public class CodeGenerator {
     private List<x86Instruction> parseNode(Node node, Map<Node, Register> registers) {
         return switch (node) {
             case ComparisonNode _ -> generateComp(node, registers);
-            case AddNode _, SubNode _, MulNode _ , DivNode _, ModNode _, XorNode _, BitwiseAndNode _, LogicalAndNode _ -> generateBinary(node, registers);
+            case BinaryOperationNode _ -> generateBinary(node, registers);
             case ReturnNode _ -> generateReturn(node, registers);
             case ConstIntNode c -> generateConst(c, registers);
             case ConstBoolNode c -> generateConst(c, registers);
@@ -131,6 +138,9 @@ public class CodeGenerator {
         instructions.add(new x86CMP(op1, op2));
         switch(node) {
             case LogicalEqualNode _ -> instructions.add(new x86Set(x86SetType.EQ, target));
+            case LogicalUnequalNode _ -> instructions.add(new x86Set(x86SetType.NEQ, target));
+            case LessThanNode _ -> instructions.add(new x86Set(x86SetType.LT, target));
+            case LessThanOrEqualNode _ -> instructions.add(new x86Set(x86SetType.LTEQ, target));
             default -> {}
         };
 
@@ -166,6 +176,8 @@ public class CodeGenerator {
             case MulNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.IMUL);
             case XorNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.XOR);
             case BitwiseAndNode _, LogicalAndNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.AND);
+            case BitwiseOrNode _, LogicalOrNode _ -> new x86CommutativeBinaryOperation(op1, op2, target, x86Command.OR);
+            case LShiftNode _ -> new x86LShift(op1, op2, target);
             case SubNode _ -> new x86Sub(op1, op2, target);
             case DivNode _ -> new x86Div(op1, op2, target, false);
             case ModNode _ -> new x86Div(op1, op2, target, true);

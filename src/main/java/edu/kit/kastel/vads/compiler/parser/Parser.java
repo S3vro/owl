@@ -1,5 +1,6 @@
 package edu.kit.kastel.vads.compiler.parser;
 
+import edu.kit.kastel.vads.compiler.ir.node.XorNode;
 import edu.kit.kastel.vads.compiler.lexer.Identifier;
 import edu.kit.kastel.vads.compiler.lexer.Keyword;
 import edu.kit.kastel.vads.compiler.lexer.KeywordType;
@@ -22,6 +23,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LogicalNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
@@ -88,7 +90,7 @@ public class Parser {
             statement = parseDeclaration();
         } else if (this.tokenSource.peek().isKeyword(KeywordType.RETURN)) {
             statement = parseReturn();
-        
+
         } else if (this.tokenSource.peek().isSeparator(SeparatorType.BRACE_OPEN)) {
             return parseBlock();
         }
@@ -139,16 +141,16 @@ public class Parser {
     private Operator parseAssignmentOperator() {
         if (this.tokenSource.peek() instanceof Operator op) {
             return switch (op.type()) {
-                case ASSIGN, 
-                        ASSIGN_DIV, 
-                        ASSIGN_MINUS, 
-                        ASSIGN_MOD, 
-                        ASSIGN_MUL, 
-                        ASSIGN_PLUS, 
-                        ASSIGN_XOR, 
-                        ASSIGN_AND, 
-                        ASSIGN_LSHIFT, 
-                        ASSIGN_RSHIFT, 
+                case ASSIGN,
+                        ASSIGN_DIV,
+                        ASSIGN_MINUS,
+                        ASSIGN_MOD,
+                        ASSIGN_MUL,
+                        ASSIGN_PLUS,
+                        ASSIGN_XOR,
+                        ASSIGN_AND,
+                        ASSIGN_LSHIFT,
+                        ASSIGN_RSHIFT,
                         ASSIGN_OR -> {
                     this.tokenSource.consume();
                     yield op;
@@ -179,12 +181,12 @@ public class Parser {
     private ExpressionTree parseExpression(int precedence) {
         ExpressionTree lhs = precedence == 0 ? parseFactor() : parseExpression(precedence - 1);
         while (true) {
-            if (this.tokenSource.peek() instanceof Operator(OperatorType type, _) 
+            if (this.tokenSource.peek() instanceof Operator(OperatorType type, _)
                 && (type.getPrecedence() == precedence)) {
                     this.tokenSource.consume();
                     ExpressionTree rhs = precedence == 0 ? parseFactor() : parseExpression(precedence - 1);
                     lhs = new BinaryOperationTree(lhs, rhs, type);
-            }                 
+            }
             else {
                 return lhs;
             }
@@ -203,6 +205,10 @@ public class Parser {
                 Span span = this.tokenSource.consume().span();
                 yield new NegateTree(parseFactor(), span);
             }
+            case Operator(var type, _) when type == OperatorType.LOGICAL_NOT -> {
+                Span span = this.tokenSource.consume().span();
+                yield new LogicalNegateTree(parseFactor(), span);
+            }
             case Identifier ident -> {
                 this.tokenSource.consume();
                 yield new IdentExpressionTree(name(ident));
@@ -212,7 +218,7 @@ public class Parser {
                     this.tokenSource.consume();
                     yield new BoolLiteralTree(true, span);
                 }
-                
+
                 if (type == KeywordType.FALSE) {
                     this.tokenSource.consume();
                     yield new BoolLiteralTree(false, span);
@@ -236,7 +242,7 @@ public class Parser {
         Map<KeywordType, BasicType> mapped = EnumSet.allOf(BasicType.class).stream()
                                                     .collect(Collectors
                                                             .toMap(e -> e.getKeywordType(), e -> e));
-        
+
         return mapped.get(word.type());
     }
 }

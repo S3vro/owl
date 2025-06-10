@@ -9,8 +9,6 @@ public record x86Mov(Register src, Register dst) implements x86Instruction {
     @Override
     public List<x86Instruction> generate() {
         if(src.equals(dst)) return List.of();
-
-
         return List.of(this);
     }
 

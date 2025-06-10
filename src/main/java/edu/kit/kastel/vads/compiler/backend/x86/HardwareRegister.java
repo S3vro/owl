@@ -6,7 +6,7 @@ public enum HardwareRegister implements Register {
 
     EAX, //Not used
     EBX,
-    ECX,
+    ECX, //Not used
     EDX, //Not used
     ESI,
     EDI,

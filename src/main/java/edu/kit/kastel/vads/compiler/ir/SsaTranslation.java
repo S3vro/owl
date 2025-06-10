@@ -2,6 +2,7 @@ package edu.kit.kastel.vads.compiler.ir;
 
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
+import edu.kit.kastel.vads.compiler.ir.node.LessThanNode;
 import edu.kit.kastel.vads.compiler.ir.node.ModNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
@@ -77,6 +78,8 @@ public class SsaTranslation {
                 case ASSIGN_MUL -> data.constructor::newMul;
                 case ASSIGN_XOR -> data.constructor::newXor;
                 case ASSIGN_AND -> data.constructor::newBitWiseAnd;
+                case ASSIGN_OR -> data.constructor::newBitwiseOr;
+                case ASSIGN_LSHIFT ->  data.constructor::newLShiftNode;
                 case ASSIGN_DIV -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case ASSIGN_MOD -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
                 case ASSIGN -> null;
@@ -110,6 +113,12 @@ public class SsaTranslation {
                 case BITWISE_AND -> data.constructor.newBitWiseAnd(lhs, rhs);
                 case LOGICAL_AND -> data.constructor.newLogicalAnd(lhs, rhs);
                 case LOGICAL_EQUAL -> data.constructor.newLogicalEqual(lhs, rhs);
+                case LOGICAL_UNEQUAL -> data.constructor.newLogicalUnequal(lhs, rhs);
+                case LOGICAL_OR -> data.constructor.newLogicalOr(lhs, rhs);
+                case BITWISE_OR -> data.constructor.newBitwiseOr(lhs, rhs);
+                case LOGICAL_LT -> data.constructor.newLessThanNode(lhs, rhs);
+                case LOGICAL_LT_OR_EQUAL -> data.constructor.newLessThanOrEqualNode(lhs, rhs);
+                case LSHIFT -> data.constructor.newLShiftNode(lhs, rhs);
                 case DIV -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case MOD -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
                 default ->
@@ -229,6 +238,15 @@ public class SsaTranslation {
         }
 
         @Override
+        public Optional<Node> visit(LogicalNegateTree negateTree, SsaTranslation data) {
+            pushSpan(negateTree);
+            Node node = negateTree.expression().accept(this, data).orElseThrow();
+            Node res = data.constructor.newXor(data.constructor.newConstInt(1), node);
+            popSpan();
+            return Optional.of(res);
+        }
+
+        @Override
         public Optional<Node> visit(IfTree ifTree, SsaTranslation data) {
             pushSpan(ifTree);
             Block thenBlock = new Block(data.constructor.graph(), "if_true");
@@ -270,6 +288,5 @@ public class SsaTranslation {
         }
 
     }
-
 
 }

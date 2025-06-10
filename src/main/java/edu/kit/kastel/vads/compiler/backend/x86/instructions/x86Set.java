@@ -13,9 +13,12 @@ public record x86Set(x86SetType type, Register reg) implements x86Instruction{
     }
 
     @Override
-    public final String toString() {
+    public String toString() {
         String setCmd = switch(type) {
             case EQ -> "sete";
+            case NEQ -> "setne";
+            case LT -> "setl";
+            case LTEQ -> "setle";
         };
 
         //TODO: Stack Register Handling
@@ -26,9 +29,9 @@ public record x86Set(x86SetType type, Register reg) implements x86Instruction{
     }
 
     public enum x86SetType {
-        EQ
+        EQ,
+        NEQ,
+        LT,
+        LTEQ
     }
 }
-
-
-

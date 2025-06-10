@@ -10,6 +10,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LogicalNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
@@ -101,6 +102,13 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
 
     @Override
     public R visit(NegateTree negateTree, T data) {
+        R r = negateTree.expression().accept(this, data);
+        r = this.visitor.visit(negateTree, accumulate(data, r));
+        return r;
+    }
+
+    @Override
+    public R visit(LogicalNegateTree negateTree, T data) {
         R r = negateTree.expression().accept(this, data);
         r = this.visitor.visit(negateTree, accumulate(data, r));
         return r;

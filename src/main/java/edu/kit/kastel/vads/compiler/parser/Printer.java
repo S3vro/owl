@@ -8,6 +8,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LogicalNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
@@ -85,6 +86,11 @@ public class Printer {
             case BoolLiteralTree(var value,_) -> this.builder.append(value);
             case NegateTree(var expression, _) -> {
                 print("-(");
+                printTree(expression);
+                print(")");
+            }
+            case LogicalNegateTree(var expression, _) -> {
+                print("!(");
                 printTree(expression);
                 print(")");
             }

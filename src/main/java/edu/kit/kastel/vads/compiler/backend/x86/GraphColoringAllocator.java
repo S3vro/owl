@@ -12,7 +12,6 @@ public class GraphColoringAllocator implements RegisterAllocator {
 
     private static final List<Register> HARDWARE_REGS = List.of(
             HardwareRegister.EBX,
-            HardwareRegister.ECX,
             HardwareRegister.ESI,
             HardwareRegister.EDI,
             HardwareRegister.R8D,

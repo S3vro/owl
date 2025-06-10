@@ -6,7 +6,8 @@ public enum x86Command {
     IMUL,
     IDIV,
     XOR,
-    AND;
+    AND,
+    OR;
 
     @Override
     public String toString() {

@@ -48,11 +48,28 @@ class GraphConstructor {
     public Node newBitWiseAnd(Node left, Node right) {
         return this.optimize(new BitwiseAndNode(currentBlock, left, right));
     }
+
     public Node newLogicalAnd(Node left, Node right) {
         return this.optimize(new LogicalAndNode(currentBlock, left, right));
     }
+    public Node newBitwiseOr(Node left, Node right) {
+        return this.optimize(new BitwiseOrNode(currentBlock, left, right));
+    }
+    public Node newLogicalOr(Node left, Node right) {
+        return this.optimize(new LogicalOrNode(currentBlock, left, right));
+    }
+    public Node newLessThanNode(Node left, Node right) {
+        return this.optimize(new LessThanNode(currentBlock, left, right));
+    }
+    public Node newLessThanOrEqualNode(Node left, Node right) {
+        return this.optimize(new LessThanOrEqualNode(currentBlock, left, right));
+    }
     public Node newLogicalEqual(Node left, Node right) {
         return this.optimize(new LogicalEqualNode(currentBlock, left, right));
+    }
+
+    public Node newLogicalUnequal(Node left, Node right) {
+        return this.optimize(new LogicalUnequalNode(currentBlock, left, right));
     }
     public Node newAdd(Node left, Node right) {
         return this.optimize(new AddNode(currentBlock(), left, right));
@@ -62,6 +79,10 @@ class GraphConstructor {
     }
     public Node newMul(Node left, Node right) {
         return this.optimize(new MulNode(currentBlock(), left, right));
+    }
+
+    public Node newLShiftNode(Node left, Node right) {
+        return this.optimize(new LShiftNode(currentBlock(), left, right));
     }
 
     public Node newDiv(Node left, Node right) {
