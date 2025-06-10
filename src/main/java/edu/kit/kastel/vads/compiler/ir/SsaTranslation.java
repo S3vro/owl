@@ -253,9 +253,9 @@ public class SsaTranslation {
         @Override
         public Optional<Node> visit(IfTree ifTree, SsaTranslation data) {
             pushSpan(ifTree);
-            Block thenBlock = new Block(data.constructor.graph(), "if_true");
-            Block elseBlock = new Block(data.constructor.graph(), "if_false");
-            Block afterIf = new Block(data.constructor.graph(), "after_if");
+            Block thenBlock = new Block(data.constructor.graph(), "if_true_" + Math.abs(ifTree.hashCode()));
+            Block elseBlock = new Block(data.constructor.graph(), "if_false_"+ Math.abs(ifTree.hashCode()));
+            Block afterIf = new Block(data.constructor.graph(), "after_if_" +  Math.abs(ifTree.hashCode()));
 
             Node exp = ifTree.e().accept(this, data).orElseThrow();
             Node ifNode = data.constructor.newIfNode(exp, thenBlock, ifTree.orElse().isPresent() ? elseBlock : afterIf);

@@ -66,6 +66,7 @@ public class CodeGenerator {
     private final StackManager manager = new StackManager();
 
     private Map<Block, BasicBlock> blocks = new HashMap<>();
+    private Map<BasicBlock, Set<BasicBlock>> blockAdjacency = new HashMap<>();
 
     public String generateCode(List<IrGraph> program) throws IOException {
         StringBuilder builder = new StringBuilder();
@@ -86,6 +87,8 @@ public class CodeGenerator {
             this.manager.construct(builder);
 
             groupInstructionsPerBlock(graph, registers);
+            this.blocks.put(graph.endBlock(), new BasicBlock(graph.endBlock()));
+            createBlockAdjacency();
             List<BasicBlock> codeBlocks = orderBlocks(graph.endBlock()).reversed();
             for (BasicBlock block : codeBlocks) {
                 builder.append(block.print());
@@ -225,22 +228,45 @@ public class CodeGenerator {
     /* Implementation of Toposort for Block ordering */
     public List<BasicBlock> orderBlocks(Block endBlock) {
         List<BasicBlock> L = new ArrayList<>();
-        List<BasicBlock> S = new ArrayList<>();
-        S.add(blocks.computeIfAbsent(endBlock, _ -> new BasicBlock(endBlock)));
+        Set<BasicBlock> S = new HashSet<>();
+        S.add(blocks.get(endBlock));
 
         while (!S.isEmpty()) {
-            BasicBlock n = S.getFirst();
-            if (!L.contains(n))
-                L.add(n);
-            S.removeFirst();
+            BasicBlock n = S.stream().findFirst().get();
+            L.add(n);
+            S.remove(n);
 
-            // all pred blocks
-            Set<BasicBlock> preds = n.getBlock().predecessors().stream().map(Node::block).map(b -> blocks.get(b))
-             .collect(Collectors.toSet());
-            S.addAll(preds);
+            Set<BasicBlock> toRemove = new HashSet<>();
+            for (BasicBlock m : this.blockAdjacency.get(n)) {
+                toRemove.add(m);
+                int incomingAmount = 0;
+
+                //if m has no other incoming edges
+                for (Map.Entry<BasicBlock, Set<BasicBlock>> e : this.blockAdjacency.entrySet()) {
+                    if (!e.getKey().equals(n)) {
+                        if (e.getValue().contains(m)) {
+                            incomingAmount++;
+                        }
+                    }
+                }
+                if (incomingAmount == 0) {
+                    S.add(m);
+                }
+            }
+            this.blockAdjacency.get(n).removeAll(toRemove);
         }
 
         return L;
+    }
+
+    private void createBlockAdjacency()
+    {
+        for (BasicBlock block : this.blocks.values()) {
+            Set<BasicBlock> preds = block.getBlock().block().predecessors().stream().map(Node::block).map(b -> blocks.get(b)).collect(
+              Collectors.toSet());
+
+            this.blockAdjacency.put(block, preds);
+        }
     }
 
 }
