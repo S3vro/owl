@@ -53,7 +53,7 @@ public class Lexer {
             case '<' -> {
                 if (hasMore(1)) {
                     if (peek(1) == '<') {
-                        if (hasMore(1) && peek(1) == '=') {
+                        if (hasMore(2) && peek(2) == '=') {
                             yield new Operator(OperatorType.ASSIGN_LSHIFT, buildSpan(3));
                         }
                         yield new Operator(OperatorType.LSHIFT, buildSpan(2));
@@ -67,7 +67,7 @@ public class Lexer {
             case '>' -> {
                 if (hasMore(1)) {
                     if (peek(1) == '>') {
-                        if (hasMore(1) && peek(1) == '=') {
+                        if (hasMore(2) && peek(2) == '=') {
                             yield new Operator(OperatorType.ASSIGN_RSHIFT, buildSpan(3));
                         }
                         yield new Operator(OperatorType.RSHIFT, buildSpan(2));
