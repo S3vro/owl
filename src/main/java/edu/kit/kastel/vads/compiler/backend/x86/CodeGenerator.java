@@ -110,11 +110,12 @@ public class CodeGenerator {
     private List<x86Instruction> generatePhi(Phi p, Map<Node, Register> registers) {
         for (int i = 0; i < p.predecessors().size(); i++) {
             Node pred = predecessorSkipProj(p, i);
+            Node predBlock = p.block().predecessors().get(i).block();
             Register src = registers.get(pred);
             Register target = registers.get(p);
-            BasicBlock pBlock = this.blocks.get(pred.block());
-            pBlock.addPhiInstruction(new x86Mov(src, HardwareRegister.EAX));
-            pBlock.addPhiInstruction(new x86Mov(HardwareRegister.EAX, target));
+            BasicBlock predBasicBlock = this.blocks.get(predBlock);
+            predBasicBlock.addPhiInstruction(new x86Mov(src, HardwareRegister.EAX));
+            predBasicBlock.addPhiInstruction(new x86Mov(HardwareRegister.EAX, target));
         }
 
         return List.of();
@@ -202,6 +203,7 @@ public class CodeGenerator {
         }
         if (visited.add(node.block()))
             scan(node.block(), visited, registers);
+
         if (!ignore(node)) {
             BasicBlock block = this.blocks.computeIfAbsent(node.block(), BasicBlock::new);
             block.command(parseNode(node, registers));

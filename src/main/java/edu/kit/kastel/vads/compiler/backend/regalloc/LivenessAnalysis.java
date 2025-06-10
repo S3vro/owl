@@ -19,7 +19,6 @@ public class LivenessAnalysis {
 
     public  Map<Node, Set<Node>> getLiveAt(IrGraph graph) {
         this.calcLive(this.graphInSequence(graph));
-
         return this.liveAt;
     }
 
@@ -37,11 +36,11 @@ public class LivenessAnalysis {
         for (Node predecessor : node.predecessors()) {
             if (visited.add(predecessor)) {
                 scan(predecessor, visited, nodesInSequence);
-                if (!(predecessor instanceof Block)&& visited.add(predecessor.block())) {
-                    scan(predecessor.block(), visited, nodesInSequence);
-                }
             }
         }
+        if (visited.add(node.block()))
+            scan(node.block(), visited, nodesInSequence);
+
 
         if (relevant(node)) nodesInSequence.add(node);
     }
@@ -65,7 +64,7 @@ public class LivenessAnalysis {
     }
 
     private static boolean relevant(Node node) {
-        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block);
+        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block || node instanceof JmpNode);
     }
 
     public void prettyPrint(IrGraph graph) {
@@ -80,6 +79,20 @@ public class LivenessAnalysis {
             case ReturnNode r -> {
                 Node usedVal = predecessorSkipProj(r, ReturnNode.RESULT);
                 yield new HashSet<>(Set.of(usedVal));
+            }
+
+            case IfNode i -> {
+                yield new HashSet<>(Set.of(i.getCondition()));
+            }
+
+            case Phi p -> {
+                Set<Node> used = new HashSet<>();
+                //TODO: this is a dirty suboptimal fix
+                for (int i = 0; i < p.predecessors().size(); i++) {
+                    used.add(predecessorSkipProj(p, i));
+                }
+
+                yield used;
             }
 
             case BinaryOperationNode b -> {
@@ -100,6 +113,7 @@ public class LivenessAnalysis {
         return switch (node) {
             case BinaryOperationNode b -> Set.of(b);
             case ConstIntNode c -> Set.of(c);
+            case Phi p -> Set.of(p);
             default -> Set.of();
         };
     }
