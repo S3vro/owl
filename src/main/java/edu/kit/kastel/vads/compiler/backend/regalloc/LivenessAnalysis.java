@@ -19,6 +19,7 @@ public class LivenessAnalysis {
 
     public  Map<Node, Set<Node>> getLiveAt(IrGraph graph) {
         this.calcLive(this.graphInSequence(graph));
+        this.prettyPrint(graph);
         return this.liveAt;
     }
 
@@ -64,13 +65,22 @@ public class LivenessAnalysis {
     }
 
     private static boolean relevant(Node node) {
-        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block || node instanceof JmpNode);
+        if (node instanceof Phi phi) return !phi.isSideEffectPhi();
+        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block);
     }
 
     public void prettyPrint(IrGraph graph) {
         for (Node node : this.graphInSequence(graph)) {
             System.out.println(String.format("%s | %s", node.toString(), liveAt.get(node)));
         }
+    }
+
+    public Set<Node> succ(Node node, Node succ) {
+        return switch(node) {
+            case ReturnNode _, Phi _, BinaryOperationNode _ -> Set.of(succ);
+            case IfNode ifNode -> Set.of(succ, ifNode.getThenBlock(), ifNode.getElseBlock());
+            default -> Set.of();
+        };
     }
 
     public Set<Node> uses(Node node) {

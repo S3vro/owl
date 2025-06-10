@@ -30,6 +30,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
 import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
 import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.type.BasicType;
 
@@ -96,12 +97,25 @@ public class Parser {
         }
         else if (this.tokenSource.peek().isKeyword(KeywordType.IF)) {
             return parseIf();
-        }else {
+        }
+        else if (this.tokenSource.peek().isKeyword(KeywordType.WHILE)) {
+            return parseWhile();
+        } else {
             statement = parseSimple();
         }
 
         this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
         return statement;
+    }
+
+    private StatementTree parseWhile(){
+        Keyword word = this.tokenSource.expectKeyword(KeywordType.WHILE);
+        this.tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
+        ExpressionTree condition = parseExpression(OperatorType.maxPrecedence());
+        this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+        StatementTree body = parseStatement();
+
+        return new WhileTree(condition, body, word.span().start());
     }
 
     private StatementTree parseIf() {

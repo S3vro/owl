@@ -2,6 +2,7 @@ package edu.kit.kastel.vads.compiler.ir;
 
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
+import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.LessThanNode;
 import edu.kit.kastel.vads.compiler.ir.node.ModNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
@@ -291,6 +292,44 @@ public class SsaTranslation {
             return NOT_AN_EXPRESSION;
         }
 
-    }
+        @Override
+        public Optional<Node> visit(WhileTree whileTree, SsaTranslation data) {
+            pushSpan(whileTree);
+            data.constructor.sealBlock(data.constructor.currentBlock());
 
+            Block loopCondition = new Block(data.constructor.graph(), "while_" + Math.abs(whileTree.hashCode()));
+            Block loopBody = new Block(data.constructor.graph(), "while_body_" + Math.abs(whileTree.hashCode()));
+            loopBody.setIgnoreTopoSort(true); //Dirty fix so toposorting works
+            Block loopAfter = new Block(data.constructor.graph(), "while_after_" + Math.abs(whileTree.hashCode()));
+
+            //Generate Condition
+            Node jmpCondition = data.constructor.newJmp(loopCondition);
+            loopCondition.addPredecessor(jmpCondition);
+            data.constructor.switchBlock(loopCondition);
+            Node condition = whileTree.condition().accept(this, data).orElseThrow();
+            Node ifNode = data.constructor.newIfNode(condition, loopBody, loopAfter);
+            //Generate true and false paths
+            Node trueProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_0);
+
+            //Loop After Block
+            loopAfter.addPredecessor(falseProj);
+
+            //Body Block
+            loopBody.addPredecessor(trueProj);
+            data.constructor.sealBlock(loopBody);
+            data.constructor.switchBlock(loopBody);
+            whileTree.body().accept(this, data);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+            loopCondition.addPredecessor(data.constructor.newJmp(loopCondition));
+
+
+            data.constructor.sealBlock(loopCondition);
+            data.constructor.sealBlock(loopAfter);
+
+            data.constructor.switchBlock(loopAfter);
+            popSpan();
+            return NOT_AN_EXPRESSION;
+        }
+    }
 }

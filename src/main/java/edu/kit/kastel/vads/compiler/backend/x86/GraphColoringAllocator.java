@@ -68,6 +68,8 @@ public class GraphColoringAllocator implements RegisterAllocator {
     }
 
     private static boolean needsRegister(Node node) {
-        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block || node instanceof ReturnNode || node instanceof JmpNode);
+        if (node instanceof Phi phi) return !phi.isSideEffectPhi();
+        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block || node instanceof JmpNode);
     }
+
 }

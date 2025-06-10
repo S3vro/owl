@@ -17,6 +17,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
 import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
 import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 
 /// A visitor that traverses a tree in postorder
 /// @param <T> a type for additional data
@@ -154,6 +155,15 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
         if (ifTree.orElse().isPresent())
             r = ifTree.orElse().get().accept(this, accumulate(data, r));
         r = this.visitor.visit(ifTree, accumulate(data, r));
+        return r;
+    }
+
+    @Override
+    public R visit(WhileTree whileTree, T data) {
+        R r = whileTree.condition().accept(this, data);
+        r = whileTree.body().accept(this, accumulate(data, r));
+        r = this.visitor.visit(whileTree, accumulate(data, r));
+
         return r;
     }
 }

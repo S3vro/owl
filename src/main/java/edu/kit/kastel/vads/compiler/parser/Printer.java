@@ -19,6 +19,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
 import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
 
+import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 import java.util.List;
 
 /// This is a utility class to help with debugging the parser.
@@ -129,6 +130,14 @@ public class Printer {
                 print("return ");
                 printTree(expr);
                 semicolon();
+            }
+            case WhileTree(var condition, var body, _) -> {
+                print("while (");
+                printTree(condition);
+                print(")");
+                space();
+                printTree(body);
+                lineBreak();
             }
             case LValueIdentTree(var name) -> printTree(name);
             case IdentExpressionTree(var name) -> printTree(name);

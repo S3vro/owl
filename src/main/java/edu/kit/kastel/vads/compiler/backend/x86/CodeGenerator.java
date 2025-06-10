@@ -123,8 +123,10 @@ public class CodeGenerator {
             Register src = registers.get(pred);
             Register target = registers.get(p);
             BasicBlock predBasicBlock = this.blocks.get(predBlock);
-            predBasicBlock.addPhiInstruction(new x86Mov(src, HardwareRegister.EAX));
+            System.out.println("Added phi to " + predBasicBlock);
+            //will later be reversed therefore put it in wrong way here
             predBasicBlock.addPhiInstruction(new x86Mov(HardwareRegister.EAX, target));
+            predBasicBlock.addPhiInstruction(new x86Mov(src, HardwareRegister.EAX));
         }
 
         return List.of();
@@ -240,17 +242,26 @@ public class CodeGenerator {
 
             Set<BasicBlock> toRemove = new HashSet<>();
             for (BasicBlock m : this.blockAdjacency.get(n)) {
+                //This is a cursed fix so that toposort of cycles works. Help me im loosing my mind
+                if (m.getBlock().getIgnoreTopoSort()) {
+                    //loop body
+                    L.add(m);
+                    toRemove.add(m);
+                    this.blockAdjacency.get(m).remove(n);
+                    continue;
+                }
                 toRemove.add(m);
                 int incomingAmount = 0;
 
                 //if m has no other incoming edges
                 for (Map.Entry<BasicBlock, Set<BasicBlock>> e : this.blockAdjacency.entrySet()) {
                     if (!e.getKey().equals(n)) {
-                        if (e.getValue().contains(m)) {
+                        if (e.getValue().contains(m) && !e.getKey().getBlock().getIgnoreTopoSort()) {
                             incomingAmount++;
                         }
                     }
                 }
+
                 if (incomingAmount == 0) {
                     S.add(m);
                 }
@@ -258,6 +269,12 @@ public class CodeGenerator {
             this.blockAdjacency.get(n).removeAll(toRemove);
         }
 
+        this.blockAdjacency.forEach((k, v) -> {
+            if (!v.isEmpty()) {
+                System.out.println(this.blockAdjacency);
+                throw new IllegalArgumentException("Block graph contains cycles! Problem lies with the block: " + k);
+            }
+        });
         return L;
     }
 

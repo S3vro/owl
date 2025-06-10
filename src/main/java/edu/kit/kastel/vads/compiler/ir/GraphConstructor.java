@@ -193,11 +193,12 @@ class GraphConstructor {
     }
 
     Node tryRemoveTrivialPhi(Phi phi) {
-        Node same = null;
+        /*Node same = null;
         for (Node op  : phi.predecessors()) {
             if (op.equals(same) || op.equals(phi)) {
                 continue;
             }
+
             if(same != null) {
                 return phi;
             }
@@ -213,7 +214,8 @@ class GraphConstructor {
                 tryRemoveTrivialPhi(oPhi);
             }
         }
-        return same;
+        return same;*/
+        return phi;
     }
 
     void sealBlock(Block block) {

@@ -70,7 +70,7 @@ public final class BasicBlock {
             printInstruction(builder, instruction);
         }
 
-        for (x86Instruction instruction : phis) {
+        for (x86Instruction instruction : phis.reversed()) {
             printInstruction(builder, instruction);
         }
 
@@ -83,5 +83,10 @@ public final class BasicBlock {
 
     private boolean isBlockEnd(x86Instruction instruction) {
         return instruction instanceof x86Return || instruction instanceof x86JE || instruction instanceof x86Jump;
+    }
+
+    @Override
+    public String toString() {
+        return this.label;
     }
 }

@@ -16,6 +16,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
 import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 
 /// A visitor that does nothing and returns [Unit#INSTANCE] by default.
 /// This can be used to implement operations only for specific tree types.
@@ -96,6 +97,9 @@ public interface NoOpVisitor<T> extends Visitor<T, Unit> {
         return Unit.INSTANCE;
     }
 
+    default Unit visit(WhileTree tree, T data) {
+        return Unit.INSTANCE;
+    }
     @Override
     default Unit visit(LogicalNegateTree literalTree, T data) {
         return Unit.INSTANCE;
