@@ -25,6 +25,7 @@ class GraphConstructor {
         sealBlock(this.currentBlock);
     }
 
+
     public Node optimize(Node current) {
         Node node = current;
         for (Optimizer opt : this.optimizer) {
@@ -109,7 +110,7 @@ class GraphConstructor {
     }
 
     public Node newIfNode(Node exp, Block thenBlock, Block elseBlock) {
-        return new IfNode(currentBlock(), exp, thenBlock, elseBlock);
+        return new ConditionalJumpNode(currentBlock(), exp, thenBlock, elseBlock);
     }
 
     public Node newConstInt(int value) {

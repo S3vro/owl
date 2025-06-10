@@ -1,15 +1,20 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
-public final class JmpNode extends Node{
+public final class JmpNode extends ControlFlowNode {
 
-    private Block target;
+    private final Block target;
 
     public JmpNode(Block block, Block target) {
         super(block);
         this.target = target;
     }
 
-    public Block getTarget() {
+    public Block target() {
         return target;
+    }
+
+    @Override
+    public String info() {
+        return "[target=" + target + "]";
     }
 }

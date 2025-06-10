@@ -5,7 +5,8 @@ import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
-import edu.kit.kastel.vads.compiler.ir.node.IfNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
+import edu.kit.kastel.vads.compiler.ir.node.ControlFlowNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.Phi;
@@ -171,7 +172,7 @@ public class YCompPrinter {
         StringJoiner result = new StringJoiner("\n");
         List<? extends Node> parents = block.predecessors();
         for (Node parent : parents) {
-            if (parent instanceof ReturnNode ||parent instanceof JmpNode || parent instanceof IfNode || (parent instanceof ProjNode p && (p.projectionInfo() == SimpleProjectionInfo.CF_0 || p.projectionInfo() == SimpleProjectionInfo.CF_1))) {
+            if (parent instanceof ReturnNode ||parent instanceof JmpNode || parent instanceof ConditionalJumpNode || (parent instanceof ProjNode p && (p.projectionInfo() == SimpleProjectionInfo.CF_0 || p.projectionInfo() == SimpleProjectionInfo.CF_1))) {
                 // Return needs no label
                 result.add(formatControlflowEdge(parent, block, ""));
             } else {
@@ -232,10 +233,9 @@ public class YCompPrinter {
                     yield VcgColor.CONTROL_FLOW;
                 }
             }
-            case IfNode _ -> VcgColor.NORMAL;
+            case ConditionalJumpNode _ -> VcgColor.NORMAL;
             case UndefNode _ -> VcgColor.SPECIAL;
-            case JmpNode _ -> VcgColor.CONTROL_FLOW;
-            case ReturnNode _ -> VcgColor.CONTROL_FLOW;
+            case ControlFlowNode _ -> VcgColor.CONTROL_FLOW;
             case StartNode _ -> VcgColor.CONTROL_FLOW;
         };
     }
@@ -258,7 +258,7 @@ public class YCompPrinter {
         } else if (node == this.graph.endBlock()) {
             return "end-block";
         }
-        if (node instanceof Block block) 
+        if (node instanceof Block block)
             return block.getLabel();
         return node.toString();
     }

@@ -1,84 +1,91 @@
 package edu.kit.kastel.vads.compiler.backend.regalloc;
 
-import edu.kit.kastel.vads.compiler.ir.IrGraph;
-import edu.kit.kastel.vads.compiler.ir.node.*;
-
+import edu.kit.kastel.vads.compiler.Main;
+import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
+import edu.kit.kastel.vads.compiler.ir.node.Block;
+import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
+import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
+import edu.kit.kastel.vads.compiler.ir.node.Node;
+import edu.kit.kastel.vads.compiler.ir.node.Phi;
+import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
-
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class LivenessAnalysis {
 
     private final Map<Node, Set<Node>> liveAt = new HashMap<>();
     private final Map<Node, Set<Node>> liveOut = new HashMap<>();
 
-
     public Map<Node, Set<Node>> getLiveOut() {
         return this.liveOut;
     }
 
-    public  Map<Node, Set<Node>> getLiveAt(IrGraph graph) {
-        this.calcLive(this.graphInSequence(graph));
-        this.prettyPrint(graph);
+    public  Map<Node, Set<Node>> calculateLiveness(List<Block> blocks) {
+        for (Block block : blocks.reversed()) {
+            this.calcLive(block);
+        }
+
+        this.prettyPrint(blocks);
         return this.liveAt;
     }
 
-    public List<Node> graphInSequence(IrGraph graph) {
-        List<Node> nodesInSequence = new ArrayList<>();
-
-        Set<Node> visited = new HashSet<>();
-        visited.add(graph.endBlock());
-        scan(graph.endBlock(), visited, nodesInSequence);
-
-        return nodesInSequence;
+    private void prettyPrint(List<Block> blocks) {
+        if (Main.DEBUG) {
+            System.out.println("-------------LIVENESS-------------");
+            for (Block block : blocks) {
+                System.out.println(block.getLabel());
+                for (Node node : block.nodesWithPhis()) {
+                    System.out.println("\t" + node + " | " + liveAt.get(node));
+                }
+                System.out.println(block.blockExit() + " | " + liveAt.get(block.blockExit()));
+            }
+        System.out.println("-------------LIVENESS-------------");
+        }
     }
 
-    private void scan(Node node, Set<Node> visited, List<Node> nodesInSequence) {
-        for (Node predecessor : node.predecessors()) {
-            if (visited.add(predecessor)) {
-                scan(predecessor, visited, nodesInSequence);
+
+    private void calcLive(Block block) {
+        // K1 Rule
+        for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
+            Node node = block.nodesWithExitAndPhi().get(i);
+            this.liveAt.put(node, uses(node));
+        }
+        // K2 Rule
+
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
+                Node node = block.nodesWithExitAndPhi().get(i);
+
+                Node nextNode = i >= block.nodesWithExitAndPhi().size() - 1 ? null : block.nodesWithExitAndPhi().get(i + 1);
+
+                Set<Node> liveAtSuc = new HashSet<>();
+                for (Node succ : succ(node, nextNode)) {
+                    liveAtSuc.addAll(this.liveAt.computeIfAbsent(succ, _ -> new HashSet<>()));
+                    liveAtSuc.removeAll(defines(node));
+                }
+
+                this.liveOut.put(node, liveAtSuc);
+                if (this.liveAt.computeIfAbsent(node, _ -> new HashSet<>()).addAll(liveAtSuc))
+                    changed = true;
             }
         }
-        if (visited.add(node.block()))
-            scan(node.block(), visited, nodesInSequence);
 
-
-        if (relevant(node)) nodesInSequence.add(node);
     }
 
-    private void calcLive(List<Node> graphSequence) {
-        for (int i = graphSequence.size() - 1; i >= 0; i--) {
-            Node node = graphSequence.get(i);
-
-            // K_1 RULE
-            this.liveAt.put(node, this.uses(node));
-
-            // K_2 RULE
-
-            if (i < graphSequence.size() - 1) {
-                Set<Node> liveAtSucc = new HashSet<>(this.liveAt.get(graphSequence.get(i + 1)));
-                this.liveOut.computeIfAbsent(node, _ -> new HashSet<>()).addAll(new HashSet<>(liveAtSucc));
-                liveAtSucc.removeAll(this.defines(node));
-                this.liveAt.get(node).addAll(liveAtSucc);
-            }
-        }
-    }
-
-    private static boolean relevant(Node node) {
-        if (node instanceof Phi phi) return !phi.isSideEffectPhi();
-        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block);
-    }
-
-    public void prettyPrint(IrGraph graph) {
-        for (Node node : this.graphInSequence(graph)) {
-            System.out.println(String.format("%s | %s", node.toString(), liveAt.get(node)));
-        }
-    }
-
-    public Set<Node> succ(Node node, Node succ) {
+    private Set<Node> succ(Node node, Node succ) {
         return switch(node) {
-            case ReturnNode _, Phi _, BinaryOperationNode _ -> Set.of(succ);
-            case IfNode ifNode -> Set.of(succ, ifNode.getThenBlock(), ifNode.getElseBlock());
+            case Phi _, BinaryOperationNode _ , ConstIntNode _ -> Set.of(succ);
+            case JmpNode jmpNode -> Set.of(jmpNode.target().nodesWithExitAndPhi().get(0));
+            case ConditionalJumpNode ifNode -> Set.of(ifNode.getThenBlock().nodesWithExitAndPhi().get(0),
+              ifNode.getElseBlock().nodesWithExitAndPhi().get(0)
+            );
             default -> Set.of();
         };
     }
@@ -91,9 +98,7 @@ public class LivenessAnalysis {
                 yield new HashSet<>(Set.of(usedVal));
             }
 
-            case IfNode i -> {
-                yield new HashSet<>(Set.of(i.getCondition()));
-            }
+            case ConditionalJumpNode i -> new HashSet<>(Set.of(i.getCondition()));
 
             case Phi p -> {
                 Set<Node> used = new HashSet<>();

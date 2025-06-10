@@ -5,6 +5,7 @@ import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86JE;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Jump;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Return;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
+import edu.kit.kastel.vads.compiler.ir.node.Phi;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,13 +15,18 @@ public final class BasicBlock {
 
     private final List<x86Instruction> instructions = new ArrayList<>();
     private final Map<Integer, String> comments = new HashMap<>();
-    private final List<x86Instruction> phis = new ArrayList<>();
+    private final List<Phi> phis = new ArrayList<>();
+    private final List<x86Instruction> phiInstructions = new ArrayList<>();
     private final Block block;
     private String label;
 
     public BasicBlock(Block block) {
         this.block = block;
         this.label = this.block.getLabel();
+    }
+
+    public List<Phi> phis() {
+        return List.copyOf(phis);
     }
 
     public String getLabel() {
@@ -50,9 +56,13 @@ public final class BasicBlock {
         this.label = label;
     }
 
-    public void addPhiInstruction(x86Instruction phi) {
+    public void addPhi(Phi phi) {
         this.phis.add(phi);
 
+    }
+
+    public void addPhiInstruction(x86Instruction phi) {
+        this.phiInstructions.add(phi);
     }
 
     private void printInstruction(StringBuilder builder, x86Instruction instruction) {
@@ -70,7 +80,7 @@ public final class BasicBlock {
             printInstruction(builder, instruction);
         }
 
-        for (x86Instruction instruction : phis.reversed()) {
+        for (x86Instruction instruction : phiInstructions) {
             printInstruction(builder, instruction);
         }
 

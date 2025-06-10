@@ -2,18 +2,33 @@ package edu.kit.kastel.vads.compiler.ir;
 
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
-import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
-import edu.kit.kastel.vads.compiler.ir.node.LessThanNode;
 import edu.kit.kastel.vads.compiler.ir.node.ModNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfo;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfoHelper;
-import edu.kit.kastel.vads.compiler.parser.ast.*;
+import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LogicalNegateTree;
+import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
+import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
+import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
+import edu.kit.kastel.vads.compiler.parser.ast.Tree;
+import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -299,7 +314,6 @@ public class SsaTranslation {
 
             Block loopCondition = new Block(data.constructor.graph(), "while_" + Math.abs(whileTree.hashCode()));
             Block loopBody = new Block(data.constructor.graph(), "while_body_" + Math.abs(whileTree.hashCode()));
-            loopBody.setIgnoreTopoSort(true); //Dirty fix so toposorting works
             Block loopAfter = new Block(data.constructor.graph(), "while_after_" + Math.abs(whileTree.hashCode()));
 
             //Generate Condition

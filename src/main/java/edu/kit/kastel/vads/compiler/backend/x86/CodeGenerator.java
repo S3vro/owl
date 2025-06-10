@@ -1,5 +1,7 @@
 package edu.kit.kastel.vads.compiler.backend.x86;
 
+import edu.kit.kastel.vads.compiler.Main;
+import edu.kit.kastel.vads.compiler.backend.regalloc.GraphColoringAllocator;
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.regalloc.RegisterAllocator;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86CMP;
@@ -18,7 +20,6 @@ import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Set;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Set.x86SetType;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Sub;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Test;
-import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.AddNode;
 import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.BitwiseAndNode;
@@ -30,7 +31,7 @@ import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
 import edu.kit.kastel.vads.compiler.ir.node.GreaterThanNode;
 import edu.kit.kastel.vads.compiler.ir.node.GreaterThanOrEqualNode;
-import edu.kit.kastel.vads.compiler.ir.node.IfNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.LShiftNode;
 import edu.kit.kastel.vads.compiler.ir.node.LessThanNode;
@@ -43,10 +44,8 @@ import edu.kit.kastel.vads.compiler.ir.node.ModNode;
 import edu.kit.kastel.vads.compiler.ir.node.MulNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.Phi;
-import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.node.RShiftNode;
 import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
-import edu.kit.kastel.vads.compiler.ir.node.StartNode;
 import edu.kit.kastel.vads.compiler.ir.node.SubNode;
 import edu.kit.kastel.vads.compiler.ir.node.XorNode;
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
@@ -55,45 +54,50 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class CodeGenerator {
 
     private final StackManager manager = new StackManager();
+    private final HashMap<Block, BasicBlock> blockMap = new HashMap<>();
+    private Block block = null;
 
-    private Map<Block, BasicBlock> blocks = new HashMap<>();
-    private Map<BasicBlock, Set<BasicBlock>> blockAdjacency = new HashMap<>();
-
-    public String generateCode(List<IrGraph> program) throws IOException {
+    public String generateCode(List<List<Block>> program) throws IOException {
         StringBuilder builder = new StringBuilder();
         // Add template
         builder.append(new String(Files.readAllBytes(Paths.get("template_ass.s"))));
 
 
-        for (IrGraph graph : program) {
+        for (List<Block> functionBlocks : program) {
             RegisterAllocator allocator = new GraphColoringAllocator(manager);
-            Map<Node, Register> registers = allocator.allocateRegisters(graph);
+            Map<Node, Register> registers = allocator.allocateRegisters(functionBlocks);
 
             System.out.println("The stack is using: " + this.manager.getStackSize() + " bytes");
-            System.out.println(registers);
+            if ( Main.DEBUG) System.out.println(registers);
 
+            //TODO: Function handling
             builder.append("\n_")
-                    .append(graph.name())
+                    .append("main")
                     .append(":\n");
 
             this.manager.construct(builder);
-
-            groupInstructionsPerBlock(graph, registers);
-            this.blocks.put(graph.endBlock(), new BasicBlock(graph.endBlock()));
-            createBlockAdjacency();
-            List<BasicBlock> codeBlocks = orderBlocks(graph.endBlock()).reversed();
-            for (BasicBlock block : codeBlocks) {
-                builder.append(block.print());
+            for (Block block : functionBlocks) {
+                BasicBlock cb = new BasicBlock(block);
+                this.blockMap.put(block, cb);
             }
+
+            for (Block block : functionBlocks) {
+                this.block = block;
+                block.nodesWithExitAndPhi().forEach(node ->
+                    blockMap.get(block).command(parseNode(node, registers))
+                );
+            }
+
+            for (Block block : functionBlocks) {
+                builder.append(blockMap.get(block).print());
+            }
+
 
             builder.append("\n");
         }
@@ -108,31 +112,23 @@ public class CodeGenerator {
             case ReturnNode _ -> generateReturn(node, registers);
             case ConstIntNode c -> generateConst(c, registers);
             case ConstBoolNode c -> generateConst(c, registers);
-            case IfNode i -> generateIf(i, registers);
+            case ConditionalJumpNode i -> generateIf(i, registers);
             case Phi p -> generatePhi(p, registers);
-            case JmpNode j -> List.of(new x86Jump(j.getTarget().getLabel()));
+            case JmpNode j -> List.of(new x86Jump(j.target().getLabel()));
             default -> List.of();
         };
     }
 
     private List<x86Instruction> generatePhi(Phi p, Map<Node, Register> registers) {
         if (p.isSideEffectPhi()) return List.of();
-        for (int i = 0; i < p.predecessors().size(); i++) {
-            Node pred = predecessorSkipProj(p, i);
-            Node predBlock = p.block().predecessors().get(i).block();
-            Register src = registers.get(pred);
-            Register target = registers.get(p);
-            BasicBlock predBasicBlock = this.blocks.get(predBlock);
-            System.out.println("Added phi to " + predBasicBlock);
-            //will later be reversed therefore put it in wrong way here
-            predBasicBlock.addPhiInstruction(new x86Mov(HardwareRegister.EAX, target));
-            predBasicBlock.addPhiInstruction(new x86Mov(src, HardwareRegister.EAX));
-        }
+        Register src = registers.get(predecessorSkipProj(p, this.block.phiIndex(p)));
+        Register target = registers.get(p);
 
-        return List.of();
+        return List.of(new x86Mov(src, HardwareRegister.EAX), new x86Mov(HardwareRegister.EAX
+          , target));
     }
 
-    private List<x86Instruction> generateIf(IfNode node, Map<Node, Register> registers) {
+    private List<x86Instruction> generateIf(ConditionalJumpNode node, Map<Node, Register> registers) {
         List<x86Instruction> instructions = new ArrayList<>();
         Register condition = registers.get(node.getCondition());
         instructions.add(new x86Test(condition));
@@ -202,90 +198,4 @@ public class CodeGenerator {
 
         return instruction.generate();
     }
-
-    private void groupInstructionsPerBlock(IrGraph graph, Map<Node, Register> registers) {
-        Set<Node> visited = new HashSet<>();
-        visited.add(graph.endBlock());
-        scan(graph.endBlock(), visited, registers);
-
-    }
-
-    private void scan(Node node, Set<Node> visited, Map<Node, Register> registers) {
-        for (Node predecessor : node.predecessors()) {
-            if (visited.add(predecessor)) {
-                scan(predecessor, visited, registers);
-            }
-        }
-        if (visited.add(node.block()))
-            scan(node.block(), visited, registers);
-
-        if (!ignore(node)) {
-            BasicBlock block = this.blocks.computeIfAbsent(node.block(), BasicBlock::new);
-            block.command(parseNode(node, registers));
-        }
-    }
-
-    private boolean ignore(Node node) {
-        return node instanceof ProjNode || node instanceof StartNode || node instanceof Block;
-    }
-
-    /* Implementation of Toposort for Block ordering */
-    public List<BasicBlock> orderBlocks(Block endBlock) {
-        List<BasicBlock> L = new ArrayList<>();
-        Set<BasicBlock> S = new HashSet<>();
-        S.add(blocks.get(endBlock));
-
-        while (!S.isEmpty()) {
-            BasicBlock n = S.stream().findFirst().get();
-            L.add(n);
-            S.remove(n);
-
-            Set<BasicBlock> toRemove = new HashSet<>();
-            for (BasicBlock m : this.blockAdjacency.get(n)) {
-                //This is a cursed fix so that toposort of cycles works. Help me im loosing my mind
-                if (m.getBlock().getIgnoreTopoSort()) {
-                    //loop body
-                    L.add(m);
-                    toRemove.add(m);
-                    this.blockAdjacency.get(m).remove(n);
-                    continue;
-                }
-                toRemove.add(m);
-                int incomingAmount = 0;
-
-                //if m has no other incoming edges
-                for (Map.Entry<BasicBlock, Set<BasicBlock>> e : this.blockAdjacency.entrySet()) {
-                    if (!e.getKey().equals(n)) {
-                        if (e.getValue().contains(m) && !e.getKey().getBlock().getIgnoreTopoSort()) {
-                            incomingAmount++;
-                        }
-                    }
-                }
-
-                if (incomingAmount == 0) {
-                    S.add(m);
-                }
-            }
-            this.blockAdjacency.get(n).removeAll(toRemove);
-        }
-
-        this.blockAdjacency.forEach((k, v) -> {
-            if (!v.isEmpty()) {
-                System.out.println(this.blockAdjacency);
-                throw new IllegalArgumentException("Block graph contains cycles! Problem lies with the block: " + k);
-            }
-        });
-        return L;
-    }
-
-    private void createBlockAdjacency()
-    {
-        for (BasicBlock block : this.blocks.values()) {
-            Set<BasicBlock> preds = block.getBlock().block().predecessors().stream().map(Node::block).map(b -> blocks.get(b)).collect(
-              Collectors.toSet());
-
-            this.blockAdjacency.put(block, preds);
-        }
-    }
-
 }

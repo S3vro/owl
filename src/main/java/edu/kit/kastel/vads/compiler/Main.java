@@ -2,7 +2,10 @@ package edu.kit.kastel.vads.compiler;
 
 import edu.kit.kastel.vads.compiler.backend.x86.CodeGenerator;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
+import edu.kit.kastel.vads.compiler.ir.NodeCollector;
 import edu.kit.kastel.vads.compiler.ir.SsaTranslation;
+import edu.kit.kastel.vads.compiler.ir.node.Block;
+import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.optimize.LocalValueNumbering;
 import edu.kit.kastel.vads.compiler.ir.util.YCompPrinter;
 import edu.kit.kastel.vads.compiler.lexer.Lexer;
@@ -20,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
+    public static boolean DEBUG = false;
+
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length != 2) {
             System.err.println("Invalid arguments: Expected one input file and one output file");
@@ -37,11 +42,28 @@ public class Main {
             return;
         }
         List<IrGraph> graphs = new ArrayList<>();
+        List<List<Block>> functionBlocks = new ArrayList<>();
         for (FunctionTree function : program.topLevelTrees()) {
             SsaTranslation translation = new SsaTranslation(function, List.of(new LocalValueNumbering()));
-            graphs.add(translation.translate());
+            IrGraph graph = translation.translate();
+            graphs.add(graph);
+            NodeCollector collector = new NodeCollector(graph);
+            functionBlocks.add(collector.collect());
         }
 
+        if (Main.DEBUG) {
+            System.out.println("-------------BLOCKS-------------");
+            for (List<Block> blocks : functionBlocks) {
+                for (Block block : blocks) {
+                    System.out.println(block.getLabel());
+                    for (Node node : block.nodesWithPhis()) {
+                        System.out.println("\t" + node);
+                    }
+                    System.out.println(block.blockExit());
+                }
+            }
+            System.out.println("-------------BLOCKS-------------");
+        }
 
         if ("vcg".equals(System.getenv("DUMP_GRAPHS")) || "vcg".equals(System.getProperty("dumpGraphs"))) {
             Path tmp = output.toAbsolutePath().resolveSibling("graphs");
@@ -53,7 +75,7 @@ public class Main {
             }
         }
 
-        String s = new CodeGenerator().generateCode(graphs);
+        String s = new CodeGenerator().generateCode(functionBlocks);
         Files.writeString(assembly, s);
 
         //compile with gcc
