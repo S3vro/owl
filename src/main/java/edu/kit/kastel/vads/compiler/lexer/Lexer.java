@@ -64,6 +64,20 @@ public class Lexer {
                 }
                 yield new Operator(OperatorType.LOGICAL_LT, buildSpan(1));
             }
+            case '>' -> {
+                if (hasMore(1)) {
+                    if (peek(1) == '>') {
+                        if (hasMore(1) && peek(1) == '=') {
+                            yield new Operator(OperatorType.ASSIGN_RSHIFT, buildSpan(3));
+                        }
+                        yield new Operator(OperatorType.RSHIFT, buildSpan(2));
+                    }
+                    if (peek(1) == '=') {
+                        yield new Operator(OperatorType.LOGICAL_GT_OR_EQUAL, buildSpan(2));
+                    }
+                }
+                yield new Operator(OperatorType.LOGICAL_GT, buildSpan(1));
+            }
             case '=' -> {
                 if (hasMore(1) && peek(1) == '=') {
                     yield new Operator(OperatorType.LOGICAL_EQUAL, buildSpan(2));

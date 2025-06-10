@@ -80,6 +80,7 @@ public class SsaTranslation {
                 case ASSIGN_AND -> data.constructor::newBitWiseAnd;
                 case ASSIGN_OR -> data.constructor::newBitwiseOr;
                 case ASSIGN_LSHIFT ->  data.constructor::newLShiftNode;
+                case ASSIGN_RSHIFT ->  data.constructor::newRShiftNode;
                 case ASSIGN_DIV -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case ASSIGN_MOD -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
                 case ASSIGN -> null;
@@ -119,6 +120,9 @@ public class SsaTranslation {
                 case LOGICAL_LT -> data.constructor.newLessThanNode(lhs, rhs);
                 case LOGICAL_LT_OR_EQUAL -> data.constructor.newLessThanOrEqualNode(lhs, rhs);
                 case LSHIFT -> data.constructor.newLShiftNode(lhs, rhs);
+                case LOGICAL_GT -> data.constructor.newGreaterThanNode(lhs, rhs);
+                case LOGICAL_GT_OR_EQUAL -> data.constructor.newGreaterThanOrEqualNode(lhs, rhs);
+                case RSHIFT -> data.constructor.newRShiftNode(lhs, rhs);
                 case DIV -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case MOD -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
                 default ->

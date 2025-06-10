@@ -1,6 +1,7 @@
 package edu.kit.kastel.vads.compiler.backend.x86.instructions;
 
 import java.util.List;
+import java.util.ArrayList;
 
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.x86.HardwareRegister;
@@ -9,7 +10,12 @@ public record x86Set(x86SetType type, Register reg) implements x86Instruction{
 
     @Override
     public List<x86Instruction> generate() {
-        return List.of(this);
+        List<x86Instruction> instructions = new ArrayList<>();
+
+        //TODO: If slow pls fix
+        instructions.add(new x86Set(type, reg));
+
+        return instructions;
     }
 
     @Override
@@ -19,6 +25,8 @@ public record x86Set(x86SetType type, Register reg) implements x86Instruction{
             case NEQ -> "setne";
             case LT -> "setl";
             case LTEQ -> "setle";
+            case GT -> "setg";
+            case GTEQ -> "setge";
         };
 
         //TODO: Stack Register Handling
@@ -32,6 +40,8 @@ public record x86Set(x86SetType type, Register reg) implements x86Instruction{
         EQ,
         NEQ,
         LT,
-        LTEQ
+        LTEQ,
+        GT,
+        GTEQ,
     }
 }

@@ -64,6 +64,13 @@ class GraphConstructor {
     public Node newLessThanOrEqualNode(Node left, Node right) {
         return this.optimize(new LessThanOrEqualNode(currentBlock, left, right));
     }
+
+    public Node newGreaterThanNode(Node left, Node right) {
+        return this.optimize(new GreaterThanNode(currentBlock, left, right));
+    }
+    public Node newGreaterThanOrEqualNode(Node left, Node right) {
+        return this.optimize(new GreaterThanOrEqualNode(currentBlock, left, right));
+    }
     public Node newLogicalEqual(Node left, Node right) {
         return this.optimize(new LogicalEqualNode(currentBlock, left, right));
     }
@@ -83,6 +90,10 @@ class GraphConstructor {
 
     public Node newLShiftNode(Node left, Node right) {
         return this.optimize(new LShiftNode(currentBlock(), left, right));
+    }
+
+    public Node newRShiftNode(Node left, Node right) {
+        return this.optimize(new RShiftNode(currentBlock(), left, right));
     }
 
     public Node newDiv(Node left, Node right) {
