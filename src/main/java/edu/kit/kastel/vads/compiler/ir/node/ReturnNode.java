@@ -6,5 +6,8 @@ public final class ReturnNode extends Node {
 
     public ReturnNode(Block block, Node sideEffect, Node result) {
         super(block, sideEffect, result);
+
+        if (sideEffect instanceof Phi phi)
+            phi.setSideEffectPhi();
     }
 }

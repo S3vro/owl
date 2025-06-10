@@ -79,6 +79,7 @@ public class CodeGenerator {
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
 
             System.out.println("The stack is using: " + this.manager.getStackSize() + " bytes");
+            System.out.println(registers);
 
             builder.append("\n_")
                     .append(graph.name())
@@ -115,6 +116,7 @@ public class CodeGenerator {
     }
 
     private List<x86Instruction> generatePhi(Phi p, Map<Node, Register> registers) {
+        if (p.isSideEffectPhi()) return List.of();
         for (int i = 0; i < p.predecessors().size(); i++) {
             Node pred = predecessorSkipProj(p, i);
             Node predBlock = p.block().predecessors().get(i).block();

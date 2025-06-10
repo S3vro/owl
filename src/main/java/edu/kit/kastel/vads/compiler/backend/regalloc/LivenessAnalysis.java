@@ -74,7 +74,7 @@ public class LivenessAnalysis {
     }
 
     public Set<Node> uses(Node node) {
-        
+
         return switch (node) {
             case ReturnNode r -> {
                 Node usedVal = predecessorSkipProj(r, ReturnNode.RESULT);
@@ -87,6 +87,7 @@ public class LivenessAnalysis {
 
             case Phi p -> {
                 Set<Node> used = new HashSet<>();
+                if (p.isSideEffectPhi()) yield used;
                 //TODO: this is a dirty suboptimal fix
                 for (int i = 0; i < p.predecessors().size(); i++) {
                     used.add(predecessorSkipProj(p, i));

@@ -1,10 +1,12 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
+import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class Phi extends Node {
     private final List<Node> users;
+    private boolean isSideEffectPhi = false;
 
     public Phi(Block block) {
         super(block);
@@ -32,4 +34,23 @@ public final class Phi extends Node {
     public void appendOperand(Node node) {
         addPredecessor(node);
     }
+
+    public boolean isSideEffectPhi() {
+        return this.isSideEffectPhi;
+    }
+
+    public void setSideEffectPhi() {
+        if (this.isSideEffectPhi) {
+            return;
+        }
+
+        this.isSideEffectPhi = true;
+        for (int i = 0; i < this.predecessors().size(); i++) {
+
+            if (predecessorSkipProj(this, i) instanceof Phi phi) {
+                phi.setSideEffectPhi();
+            }
+        }
+    }
+
 }
