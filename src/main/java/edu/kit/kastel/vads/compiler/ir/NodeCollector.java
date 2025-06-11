@@ -38,19 +38,26 @@ public class NodeCollector {
       return proj.projectionInfo() == ProjNode.SimpleProjectionInfo.SIDE_EFFECT;
     }
 
+    boolean sideEffectPhi = false;
     for(Node preds : node.predecessors()) {
       if (visited.add(preds)) {
         if (markSideEffectPhis(preds, visited) && node instanceof Phi phi) {
           phi.setSideEffectPhi();
-          return true;
+          sideEffectPhi = true;
         }
       }
     }
 
-    return false;
+    return sideEffectPhi;
   }
 
   private void scan(Node node, Set<Node> visited) {
+    if (node instanceof ProjNode proj)  {
+      if (proj.projectionInfo() == ProjNode.SimpleProjectionInfo.SIDE_EFFECT) {
+        return;
+      }
+    }
+
     for (Node predecessor : node.predecessors()) {
       if (visited.add(predecessor)) {
         scan(predecessor, visited);

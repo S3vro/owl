@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class LivenessAnalysis {
 
@@ -29,6 +30,10 @@ public class LivenessAnalysis {
 
     public  Map<LivenessKey, Set<Node>> calculateLiveness(List<Block> blocks) {
         this.calcLive(blocks.reversed());
+        Block startBlock = blocks.stream().filter(b -> b.predecessors().isEmpty()).findFirst().orElseThrow();
+        if (!this.liveAt.get(new LivenessKey(startBlock, startBlock.nodesWithExitAndPhi().get(0))).isEmpty()) {
+            throw new IllegalArgumentException("Liveness Analysis returned with values at the top");
+        }
         this.prettyPrint(blocks);
         return this.liveAt;
     }
@@ -74,14 +79,13 @@ public class LivenessAnalysis {
                         liveAtSuc.removeAll(defines(node));
                     }
 
-                    /*
                     Set<Node> toRemove = this.liveAt.computeIfAbsent(new LivenessKey(block, node), _ -> new HashSet<>()).stream().filter(
                       live -> !uses(new LivenessKey(block, node)).contains(live) && !liveAtSuc.contains(live)
                     ).collect(Collectors.toSet());
                     if(this.liveAt.get(new LivenessKey(block, node)).removeAll(toRemove)) {
                         System.out.println("Removed Elems: " + toRemove + " because " + uses(new LivenessKey(block, node)) + " in " + node.block());
                     }
-                    */
+
                     this.liveOut.put(new LivenessKey(block, node), liveAtSuc);
                     changed = this.liveAt.computeIfAbsent(new LivenessKey(block, node), _ -> new HashSet<>()).addAll(liveAtSuc);
                 }
