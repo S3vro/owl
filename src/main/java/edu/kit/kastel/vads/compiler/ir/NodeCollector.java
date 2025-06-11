@@ -33,16 +33,21 @@ public class NodeCollector {
     return blocks;
   }
 
-  private void markSideEffectPhis(Node node, Set<Node> visited) {
-    if (node instanceof Phi phi) {
-      phi.setSideEffectPhi();
+  private boolean markSideEffectPhis(Node node, Set<Node> visited) {
+    if (node instanceof ProjNode proj) {
+      return proj.projectionInfo() == ProjNode.SimpleProjectionInfo.SIDE_EFFECT;
     }
 
     for(Node preds : node.predecessors()) {
       if (visited.add(preds)) {
-        markSideEffectPhis(preds, visited);
+        if (markSideEffectPhis(preds, visited) && node instanceof Phi phi) {
+          phi.setSideEffectPhi();
+          return true;
+        }
       }
     }
+
+    return false;
   }
 
   private void scan(Node node, Set<Node> visited) {

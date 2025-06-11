@@ -59,9 +59,9 @@ public class LivenessAnalysis {
 
         // K2 Rule
 
+        boolean changed = true;
+        while (changed ) {
         for (Block block : blocks) {
-            boolean changed = true;
-            while (changed) {
                 changed = false;
                 for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
                     Node node = block.nodesWithExitAndPhi().get(i);
@@ -82,7 +82,6 @@ public class LivenessAnalysis {
                         System.out.println("Removed Elems: " + toRemove + " because " + uses(new LivenessKey(block, node)) + " in " + node.block());
                     }
                     */
-
                     this.liveOut.put(new LivenessKey(block, node), liveAtSuc);
                     changed = this.liveAt.computeIfAbsent(new LivenessKey(block, node), _ -> new HashSet<>()).addAll(liveAtSuc);
                 }

@@ -1,6 +1,5 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
-import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,12 +53,6 @@ public final class Phi extends Node {
         }
 
         this.isSideEffectPhi = true;
-        for (int i = 0; i < this.predecessors().size(); i++) {
-
-            if (predecessorSkipProj(this, i) instanceof Phi phi) {
-                phi.setSideEffectPhi();
-            }
-        }
     }
 
     @Override
