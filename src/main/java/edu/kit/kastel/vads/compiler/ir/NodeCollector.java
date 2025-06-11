@@ -60,19 +60,7 @@ public class NodeCollector {
 
   private void scan(Node node, Set<Node> visited) {
 
-    if (node instanceof ProjNode proj) {
-      if (proj.projectionInfo() == ProjNode.SimpleProjectionInfo.SIDE_EFFECT) {
-          for (Node succ : proj.predecessor(ProjNode.IN).successors()) {
-            if (!succ.equals(proj)) {
-              if (!succ.successors().isEmpty()) {
-                return;
-              }
-            }
-          }
-      }
-    }
-
-    for (Node predecessor : node.predecessors()) {
+    for (Node predecessor : node.predecessors().reversed()) {
       if (visited.add(predecessor)) {
         scan(predecessor, visited);
       }
