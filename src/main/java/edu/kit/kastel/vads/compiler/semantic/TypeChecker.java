@@ -1,5 +1,8 @@
 package edu.kit.kastel.vads.compiler.semantic;
 
+import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
+import edu.kit.kastel.vads.compiler.parser.ast.TernaryTree;
+import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 import java.util.Map;
 
 import edu.kit.kastel.vads.compiler.lexer.Operator.OperatorType;
@@ -39,7 +42,30 @@ public class TypeChecker implements NoOpVisitor<Map<IdentName, Type>>{
         return NoOpVisitor.super.visit(literalTree, data);
     }
 
-    @Override
+  @Override
+  public Unit visit(ReturnTree returnTree, Map<IdentName, Type> data) {
+      if (returnTree.expression().getType(data).equals(BasicType.BOOL)) {
+        throw new SemanticException("this compiler can currently only return ints!");
+      }
+    return NoOpVisitor.super.visit(returnTree, data);
+  }
+
+  @Override
+  public Unit visit(WhileTree tree, Map<IdentName, Type> data) {
+    boolean valid = tree.condition().getType(data).equals(BasicType.BOOL);
+    if (!valid) throw new SemanticException("expression"+ tree.condition() + " at " + tree.condition().span() + " should be of type bool");
+    return NoOpVisitor.super.visit(tree, data);
+  }
+
+  @Override
+  public Unit visit(TernaryTree ternaryTree, Map<IdentName, Type> data) {
+      if (ternaryTree.trueBranch().getType(data) != ternaryTree.falseBranch().getType(data)) {
+        throw new SemanticException("both branches of a ternary must have the same type!");
+      }
+    return NoOpVisitor.super.visit(ternaryTree, data);
+  }
+
+  @Override
     public Unit visit(BinaryOperationTree binaryOperationTree, Map<IdentName, Type> data) {
         OperatorType op = binaryOperationTree.operatorType();
         if (op == OperatorType.LOGICAL_EQUAL || op == OperatorType.LOGICAL_UNEQUAL) {
@@ -79,15 +105,15 @@ public class TypeChecker implements NoOpVisitor<Map<IdentName, Type>>{
 
     public static BinaryOperatorType fromOperatorType(OperatorType type) {
             return switch(type) {
-                case MUL, 
-                     DIV, 
-                     PLUS, 
-                     MINUS, 
-                     MOD, 
-                     RSHIFT, 
-                     LSHIFT, 
-                     BITWISE_AND, 
-                     BITWISE_OR, 
+                case MUL,
+                     DIV,
+                     PLUS,
+                     MINUS,
+                     MOD,
+                     RSHIFT,
+                     LSHIFT,
+                     BITWISE_AND,
+                     BITWISE_OR,
                      BITWISE_XOR -> new BinaryOperatorType(BasicType.INT, BasicType.INT, BasicType.INT);
                 case LOGICAL_GT,
                      LOGICAL_GT_OR_EQUAL,
@@ -105,6 +131,6 @@ public class TypeChecker implements NoOpVisitor<Map<IdentName, Type>>{
     }
 
     public static record BinaryOperatorType(Type res, Type lhs, Type rhs){
-        
+
     }
 }

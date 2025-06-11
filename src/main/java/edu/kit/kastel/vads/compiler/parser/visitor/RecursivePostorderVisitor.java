@@ -174,6 +174,7 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
         r = ternaryTree.trueBranch().accept(this, accumulate(data, r));
         r = ternaryTree.falseBranch().accept(this, accumulate(data, r));
 
+        r = this.visitor.visit(ternaryTree, accumulate(data, r));
         return r;
     }
 }
