@@ -4,6 +4,7 @@ import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.Phi;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
+import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
 import edu.kit.kastel.vads.compiler.ir.node.StartNode;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -23,7 +24,25 @@ public class NodeCollector {
     Set<Node> visited = new HashSet<>();
     visited.add(graph.endBlock());
     scan(graph.endBlock(), visited);
+
+    visited.clear();
+    Node retNode = graph.endBlock().predecessors().stream().filter(n -> n instanceof ReturnNode).findAny().get();
+    Node sideEffectPhi = retNode.predecessor(ReturnNode.SIDE_EFFECT);
+    visited.add(sideEffectPhi);
+    markSideEffectPhis(sideEffectPhi,  visited);
     return blocks;
+  }
+
+  private void markSideEffectPhis(Node node, Set<Node> visited) {
+    if (node instanceof Phi phi) {
+      phi.setSideEffectPhi();
+    }
+
+    for(Node preds : node.predecessors()) {
+      if (visited.add(preds)) {
+        markSideEffectPhis(preds, visited);
+      }
+    }
   }
 
   private void scan(Node node, Set<Node> visited) {
@@ -47,7 +66,8 @@ public class NodeCollector {
 
     if (node instanceof Phi phi && !phi.isSideEffectPhi()) {
       for (int i = 0; i < phi.predecessors().size(); i++) {
-        phi.block().predecessor(i).block().addPhi(phi, i);
+        Block block = phi.block().predecessor(i).block();
+        block.addPhi(phi, i);
       }
     }
   }

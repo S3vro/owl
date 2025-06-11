@@ -209,7 +209,9 @@ class GraphConstructor {
         if (same == null) {
             same = newUndef(phi.predecessors());
         }
+
         phi.replaceBy(same);
+
         for (Node use : phi.users()) {
             if (use instanceof Phi oPhi) {
                 tryRemoveTrivialPhi(oPhi);

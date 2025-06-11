@@ -7,14 +7,23 @@ import java.util.List;
 public final class Phi extends Node {
     private final List<Node> users;
     private boolean isSideEffectPhi = false;
+    private Block operationBlock;
 
-    public Phi(Block block) {
-        super(block);
+    public Phi(Block block, Node... preds) {
+        super(block, preds);
         this.users = new ArrayList<>();
     }
 
     public List<Node> users() {
         return List.copyOf(this.users);
+    }
+
+    public void setOperationBlock(Block operationBlock) {
+        this.operationBlock = operationBlock;
+    }
+
+    public Block operationBlock() {
+        return operationBlock;
     }
 
     public boolean addUser(Node node) {
@@ -51,5 +60,21 @@ public final class Phi extends Node {
                 phi.setSideEffectPhi();
             }
         }
+    }
+
+    @Override
+    protected String info() {
+        String preds = "";
+
+        for (Node node : predecessors()) {
+            if (node instanceof Phi) {
+                preds += "Phi";
+            } else {
+                preds += node;
+            }
+            preds += ",";
+        }
+
+        return "[" + preds + "]";
     }
 }

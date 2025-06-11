@@ -4,6 +4,7 @@ import edu.kit.kastel.vads.compiler.Main;
 import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
@@ -14,22 +15,20 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class LivenessAnalysis {
 
-    private final Map<Node, Set<Node>> liveAt = new HashMap<>();
-    private final Map<Node, Set<Node>> liveOut = new HashMap<>();
+    private final Map<LivenessKey, Set<Node>> liveAt = new HashMap<>();
+    private final Map<LivenessKey, Set<Node>> liveOut = new HashMap<>();
 
-    public Map<Node, Set<Node>> getLiveOut() {
+    public Map<LivenessKey, Set<Node>> getLiveOut() {
         return this.liveOut;
     }
 
-    public  Map<Node, Set<Node>> calculateLiveness(List<Block> blocks) {
-        for (Block block : blocks.reversed()) {
-            this.calcLive(block);
-        }
-
+    public  Map<LivenessKey, Set<Node>> calculateLiveness(List<Block> blocks) {
+        this.calcLive(blocks.reversed());
         this.prettyPrint(blocks);
         return this.liveAt;
     }
@@ -40,59 +39,74 @@ public class LivenessAnalysis {
             for (Block block : blocks) {
                 System.out.println(block.getLabel());
                 for (Node node : block.nodesWithPhis()) {
-                    System.out.println("\t" + node + " | " + liveAt.get(node));
+                    System.out.println("\t" + node + " | " + liveAt.get(new LivenessKey(block, node)));
                 }
-                System.out.println(block.blockExit() + " | " + liveAt.get(block.blockExit()));
+                System.out.println(block.blockExit() + " | " + liveAt.get(new LivenessKey(block, block.blockExit())));
             }
         System.out.println("-------------LIVENESS-------------");
         }
     }
 
 
-    private void calcLive(Block block) {
+    private void calcLive(List<Block> blocks) {
         // K1 Rule
-        for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
-            Node node = block.nodesWithExitAndPhi().get(i);
-            this.liveAt.put(node, uses(node));
-        }
-        // K2 Rule
-
-        boolean changed = true;
-        while (changed) {
-            changed = false;
+        for (Block block : blocks) {
             for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
                 Node node = block.nodesWithExitAndPhi().get(i);
+                this.liveAt.put(new LivenessKey(block, node), uses(new LivenessKey(block, node)));
+            }
+        }
 
-                Node nextNode = i >= block.nodesWithExitAndPhi().size() - 1 ? null : block.nodesWithExitAndPhi().get(i + 1);
+        // K2 Rule
 
-                Set<Node> liveAtSuc = new HashSet<>();
-                for (Node succ : succ(node, nextNode)) {
-                    liveAtSuc.addAll(this.liveAt.computeIfAbsent(succ, _ -> new HashSet<>()));
-                    liveAtSuc.removeAll(defines(node));
+        for (Block block : blocks) {
+            boolean changed = true;
+            while (changed) {
+                changed = false;
+                for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
+                    Node node = block.nodesWithExitAndPhi().get(i);
+
+                    Node nextNode = i >= block.nodesWithExitAndPhi().size() - 1 ? null : block.nodesWithExitAndPhi().get(i + 1);
+
+                    Set<Node> liveAtSuc = new HashSet<>();
+                    for (LivenessKey succ : succ(node, nextNode, block)) {
+                        liveAtSuc.addAll(this.liveAt.computeIfAbsent(succ, _ -> new HashSet<>()));
+                        liveAtSuc.removeAll(defines(node));
+                    }
+
+                    /*
+                    Set<Node> toRemove = this.liveAt.computeIfAbsent(new LivenessKey(block, node), _ -> new HashSet<>()).stream().filter(
+                      live -> !uses(new LivenessKey(block, node)).contains(live) && !liveAtSuc.contains(live)
+                    ).collect(Collectors.toSet());
+                    if(this.liveAt.get(new LivenessKey(block, node)).removeAll(toRemove)) {
+                        System.out.println("Removed Elems: " + toRemove + " because " + uses(new LivenessKey(block, node)) + " in " + node.block());
+                    }
+                    */
+
+                    this.liveOut.put(new LivenessKey(block, node), liveAtSuc);
+                    changed = this.liveAt.computeIfAbsent(new LivenessKey(block, node), _ -> new HashSet<>()).addAll(liveAtSuc);
                 }
-
-                this.liveOut.put(node, liveAtSuc);
-                if (this.liveAt.computeIfAbsent(node, _ -> new HashSet<>()).addAll(liveAtSuc))
-                    changed = true;
             }
         }
 
     }
 
-    private Set<Node> succ(Node node, Node succ) {
+    private Set<LivenessKey> succ(Node node, Node succ, Block block) {
         return switch(node) {
-            case Phi _, BinaryOperationNode _ , ConstIntNode _ -> Set.of(succ);
-            case JmpNode jmpNode -> Set.of(jmpNode.target().nodesWithExitAndPhi().get(0));
-            case ConditionalJumpNode ifNode -> Set.of(ifNode.getThenBlock().nodesWithExitAndPhi().get(0),
-              ifNode.getElseBlock().nodesWithExitAndPhi().get(0)
+            case Phi _, BinaryOperationNode _ , ConstIntNode _, ConstBoolNode _ -> Set.of(new LivenessKey(block, succ));
+            case JmpNode jmpNode -> Set.of(new LivenessKey(jmpNode.target(), jmpNode.target().nodesWithExitAndPhi().get(0)));
+            case ConditionalJumpNode ifNode -> Set.of(
+              new LivenessKey(ifNode.getThenBlock(),ifNode.getThenBlock().nodesWithExitAndPhi().get(0)),
+              new LivenessKey(ifNode.getElseBlock(),ifNode.getElseBlock().nodesWithExitAndPhi().get(0))
             );
-            default -> Set.of();
+            case ReturnNode _ -> Set.of();
+            default -> throw new UnsupportedOperationException(node + " is not handled");
         };
     }
 
-    public Set<Node> uses(Node node) {
+    public Set<Node> uses(LivenessKey key) {
 
-        return switch (node) {
+        return switch (key.node()) {
             case ReturnNode r -> {
                 Node usedVal = predecessorSkipProj(r, ReturnNode.RESULT);
                 yield new HashSet<>(Set.of(usedVal));
@@ -103,11 +117,9 @@ public class LivenessAnalysis {
             case Phi p -> {
                 Set<Node> used = new HashSet<>();
                 if (p.isSideEffectPhi()) yield used;
-                //TODO: this is a dirty suboptimal fix
-                for (int i = 0; i < p.predecessors().size(); i++) {
-                    used.add(predecessorSkipProj(p, i));
-                }
 
+                int index = key.block().phiIndex(p);
+                used.add(predecessorSkipProj(p, index));
                 yield used;
             }
 
@@ -128,9 +140,24 @@ public class LivenessAnalysis {
     public Set<Node> defines(Node node) {
         return switch (node) {
             case BinaryOperationNode b -> Set.of(b);
-            case ConstIntNode c -> Set.of(c);
+            case ConstIntNode c-> Set.of(c);
+            case ConstBoolNode c-> Set.of(c);
             case Phi p -> Set.of(p);
             default -> Set.of();
         };
+    }
+
+    public record LivenessKey(Block block, Node node) {
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof LivenessKey that)) return false;
+          return Objects.equals(node, that.node) && Objects.equals(block, that.block);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(block, node);
+        }
     }
 }

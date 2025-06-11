@@ -64,7 +64,12 @@ public final class Block extends Node {
 
     public void addNode(Node node) {
         if (node instanceof ControlFlowNode exitNode) {
-            if (blockExit != null) {return;}
+            if (blockExit != null) {
+                // Return Nodes are stronger than jumps
+                if (!(exitNode instanceof ReturnNode)) {
+                    return;
+                }
+            }
             this.blockExit = exitNode;
             return;
         }

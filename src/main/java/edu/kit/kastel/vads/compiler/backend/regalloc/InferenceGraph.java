@@ -16,10 +16,10 @@ public class InferenceGraph {
 
     public void generate(List<Block> blocks){
         LivenessAnalysis livenessAnalysis = new LivenessAnalysis();
-        Map<Node, Set<Node>> live = livenessAnalysis.calculateLiveness(blocks);
+        Map<LivenessAnalysis.LivenessKey, Set<Node>> live = livenessAnalysis.calculateLiveness(blocks);
 
-        live.keySet().forEach(node -> {
-            this.adjacencyList.put(new InferenceGraphNode(node), new HashSet<>());
+        live.keySet().forEach(key -> {
+            this.adjacencyList.put(new InferenceGraphNode(key.node()), new HashSet<>());
         });
 
         for (Set<Node> liveTogether : live.values()) {
@@ -33,10 +33,10 @@ public class InferenceGraph {
         }
 
         // Add Edge to live out vars in case the variable is not used
-        livenessAnalysis.getLiveOut().forEach((node, liveOut) -> {
+        livenessAnalysis.getLiveOut().forEach((key, liveOut) -> {
             for (Node out : liveOut) {
-                if (!out.equals(node)) {
-                    this.connect(new InferenceGraphNode(node), new InferenceGraphNode(out));
+                if (!out.equals(key.node())) {
+                    this.connect(new InferenceGraphNode(key.node()), new InferenceGraphNode(out));
                 }
             }
         });
