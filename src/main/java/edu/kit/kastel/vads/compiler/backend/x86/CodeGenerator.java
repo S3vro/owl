@@ -136,7 +136,7 @@ public class CodeGenerator {
     private List<x86Instruction> generateIf(ConditionalJumpNode node, Map<Node, Register> registers) {
         List<x86Instruction> instructions = new ArrayList<>();
         Register condition = registers.get(node.getCondition());
-        instructions.add(new x86Test(condition));
+        instructions.addAll(new x86Test(condition).generate());
         instructions.add(new x86JE(node.getElseBlock().getLabel()));
         instructions.add(new x86Jump(node.getThenBlock().getLabel()));
         return instructions;
@@ -148,7 +148,7 @@ public class CodeGenerator {
         Register op2 = registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT));
         Register target = registers.get(node);
 
-        instructions.add(new x86CMP(op2, op1));
+        instructions.addAll(new x86CMP(op2, op1).generate());
         x86SetType type = switch(node) {
             case LogicalEqualNode _ -> x86SetType.EQ;
             case LogicalUnequalNode _ -> x86SetType.NEQ;

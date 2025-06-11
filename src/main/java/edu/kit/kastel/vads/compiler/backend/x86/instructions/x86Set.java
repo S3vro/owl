@@ -1,5 +1,6 @@
 package edu.kit.kastel.vads.compiler.backend.x86.instructions;
 
+import edu.kit.kastel.vads.compiler.backend.x86.StackRegister;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -12,8 +13,12 @@ public record x86Set(x86SetType type, Register reg) implements x86Instruction{
     public List<x86Instruction> generate() {
         List<x86Instruction> instructions = new ArrayList<>();
 
-        //TODO: If slow pls fix
-        instructions.add(new x86Set(type, reg));
+        if (reg instanceof StackRegister) {
+            instructions.add(new x86Set(type, HardwareRegister.EAX));
+            instructions.add(new x86Mov(HardwareRegister.EAX, reg));
+        } else {
+            instructions.add(new x86Set(type, reg));
+        }
 
         return instructions;
     }
