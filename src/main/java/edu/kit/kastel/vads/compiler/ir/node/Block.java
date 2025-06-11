@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 public final class Block extends Node {
 
     private final String label;
-    private final List<Node> nodes = new ArrayList<>();
+    private List<Node> nodes = new ArrayList<>();
     private final HashMap<Phi, Integer> phis = new LinkedHashMap<>();
     private @Nullable ControlFlowNode blockExit = null;
 
@@ -77,4 +77,7 @@ public final class Block extends Node {
         this.nodes.add(node);
     }
 
+    public void setNodes(List<Node> nodes) {
+        this.nodes = nodes;
+    }
 }

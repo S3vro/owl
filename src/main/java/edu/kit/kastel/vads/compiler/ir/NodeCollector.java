@@ -33,6 +33,57 @@ public class NodeCollector {
 
     return blocks;
   }
+  /*
+
+  private List<Node> sort(Block b) {
+
+    Map<Node, Set<Node>> adjacencyList = new HashMap<>();
+    b.nodesWithPhis().forEach(node -> adjacencyList.computeIfAbsent(node, _ -> new HashSet<>()).
+      addAll(
+        node.predecessors().stream()
+          .filter(node2 -> node2.block().equals(b))
+          .collect(Collectors.toSet())));
+
+    List<Node> L =  new ArrayList<>();
+    Set<Node> S = new HashSet<>();
+    S.add(b.nodesWithPhis().getLast());
+
+    while (!S.isEmpty()) {
+      Node n = S.stream().findFirst().get();
+      L.add(n);
+      S.remove(n);
+
+      Set<Node> remove = new HashSet<>();
+      for (Node m : adjacencyList.get(n)) {
+        remove.add(m);
+
+        int incomingAmount = 0;
+        //if m has no other incoming edges
+        for (Map.Entry<Node, Set<Node>> e : adjacencyList.entrySet()) {
+          if (!e.getKey().equals(n)) {
+            if (e.getValue().contains(m)) {
+              incomingAmount++;
+            }
+          }
+        }
+
+        if (incomingAmount == 0) {
+          S.add(m);
+        }
+      }
+      adjacencyList.get(n).removeAll(remove);
+    }
+
+    adjacencyList.forEach((k, v) -> {
+      if (!v.isEmpty()) {
+        System.out.println(adjacencyList);
+        throw new IllegalArgumentException("Block graph contains cycles! Problem lies with the node: " + k);
+      }
+    });
+
+    return L.reversed();
+  }
+  */
 
   private boolean markSideEffectPhis(Node node, Set<Node> visited) {
     if (node instanceof ProjNode proj) {
@@ -60,6 +111,7 @@ public class NodeCollector {
 
   private void scan(Node node, Set<Node> visited) {
 
+    //The order is important. Visit non sideeffect first!
     for (Node predecessor : node.predecessors().reversed()) {
       if (visited.add(predecessor)) {
         scan(predecessor, visited);

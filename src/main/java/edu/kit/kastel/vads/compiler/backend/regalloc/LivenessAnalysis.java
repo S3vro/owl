@@ -34,6 +34,8 @@ public class LivenessAnalysis {
         this.prettyPrint(blocks);
 
         if (!this.liveAt.get(new LivenessKey(startBlock, startBlock.nodesWithExitAndPhi().get(0))).isEmpty()) {
+            Main.DEBUG = true;
+            this.prettyPrint(blocks);
             throw new IllegalArgumentException("Liveness Analysis returned with values at the top");
         }
         return this.liveAt;
@@ -67,31 +69,35 @@ public class LivenessAnalysis {
 
         boolean changed = true;
         while (changed ) {
-        for (Block block : blocks) {
-                changed = false;
-                for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
-                    Node node = block.nodesWithExitAndPhi().get(i);
+            changed = false;
+            for (Block block : blocks) {
+                    for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
+                        Node node = block.nodesWithExitAndPhi().get(i);
 
-                    Node nextNode = i >= block.nodesWithExitAndPhi().size() - 1 ? null : block.nodesWithExitAndPhi().get(i + 1);
+                        Node nextNode = i >= block.nodesWithExitAndPhi().size() - 1 ? null : block.nodesWithExitAndPhi().get(i + 1);
 
-                    Set<Node> liveAtSuc = new HashSet<>();
-                    for (LivenessKey succ : succ(node, nextNode, block)) {
-                        liveAtSuc.addAll(this.liveAt.computeIfAbsent(succ, _ -> new HashSet<>()));
-                        liveAtSuc.removeAll(defines(node));
+                        Set<Node> liveAtSuc = new HashSet<>();
+                        for (LivenessKey succ : succ(node, nextNode, block)) {
+                            liveAtSuc.addAll(this.liveAt.computeIfAbsent(succ, _ -> new HashSet<>()));
+                            liveAtSuc.removeAll(defines(node));
+                        }
+
+                        Set<Node> toRemove = this.liveAt.get(new LivenessKey(block, node)).stream().filter(
+                          live -> !uses(new LivenessKey(block, node)).contains(live) && !liveAtSuc.contains(live)
+                        ).collect(Collectors.toSet());
+                        if(this.liveAt.get(new LivenessKey(block, node)).removeAll(toRemove)) {
+                            System.out.println("Removed Elems: " + toRemove + " because " + uses(new LivenessKey(block, node)) + " in " + node.block());
+                        }
+
+
+
+                        this.liveOut.put(new LivenessKey(block, node), liveAtSuc);
+                        if (this.liveAt.get(new LivenessKey(block, node)).addAll(liveAtSuc)) {
+                            changed = true;
+                        }
                     }
-
-                    Set<Node> toRemove = this.liveAt.computeIfAbsent(new LivenessKey(block, node), _ -> new HashSet<>()).stream().filter(
-                      live -> !uses(new LivenessKey(block, node)).contains(live) && !liveAtSuc.contains(live)
-                    ).collect(Collectors.toSet());
-                    if(this.liveAt.get(new LivenessKey(block, node)).removeAll(toRemove)) {
-                        System.out.println("Removed Elems: " + toRemove + " because " + uses(new LivenessKey(block, node)) + " in " + node.block());
-                    }
-
-                    this.liveOut.put(new LivenessKey(block, node), liveAtSuc);
-                    changed = this.liveAt.computeIfAbsent(new LivenessKey(block, node), _ -> new HashSet<>()).addAll(liveAtSuc);
                 }
             }
-        }
 
     }
 

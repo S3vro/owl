@@ -116,7 +116,7 @@ class GraphConstructor {
     public Node newConstInt(int value) {
         // always move const into start block, this allows better deduplication
         // and resultingly in better value numberin
-        return this.optimize(new ConstIntNode(currentBlock(), value));
+        return this.optimize(new ConstIntNode(this.graph.startBlock(), value));
     }
     public Node newConstBool(boolean value) {
         // always move const into start block, this allows better deduplication
