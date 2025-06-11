@@ -113,8 +113,8 @@ public class NodeCollector {
 
     //The order is important. Visit non sideeffect first!
     for (Node predecessor : node.predecessors()) {
-      if (visited.add(predecessor) &&
-        (!(predecessor instanceof ProjNode projNode) || projNode.projectionInfo() != ProjNode.SimpleProjectionInfo.SIDE_EFFECT)) {
+      if (!(predecessor instanceof ProjNode projNode) || projNode.projectionInfo() != ProjNode.SimpleProjectionInfo.SIDE_EFFECT) {
+      if (visited.add(predecessor))
         scan(predecessor, visited);
       }
     }
