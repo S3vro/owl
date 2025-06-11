@@ -17,17 +17,18 @@ import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.semantic.SemanticAnalysis;
 import edu.kit.kastel.vads.compiler.semantic.SemanticException;
 import java.io.IOException;
+import static java.lang.System.exit;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
-    public static boolean DEBUG = false;
+    public static boolean DEBUG = true;
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length != 2) {
             System.err.println("Invalid arguments: Expected one input file and one output file");
-            System.exit(3);
+            exit(3);
         }
         Path input = Path.of(args[0]);
         Path assembly = Path.of(args[1] + ".s");
@@ -37,7 +38,7 @@ public class Main {
             new SemanticAnalysis(program).analyze();
         } catch (SemanticException e) {
             e.printStackTrace();
-            System.exit(7);
+            exit(7);
             return;
         }
         List<IrGraph> graphs = new ArrayList<>();
@@ -94,7 +95,7 @@ public class Main {
             return parser.parseProgram();
         } catch (ParseException e) {
             e.printStackTrace();
-            System.exit(42);
+            exit(42);
             throw new AssertionError("unreachable");
         }
     }

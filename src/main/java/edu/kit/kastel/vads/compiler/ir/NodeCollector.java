@@ -4,7 +4,6 @@ import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.Phi;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
-import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
 import edu.kit.kastel.vads.compiler.ir.node.StartNode;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -22,91 +21,63 @@ public class NodeCollector {
 
   public List<Block> collect() {
     Set<Node> visited = new HashSet<>();
-    Node retNode = graph.endBlock().predecessors().stream().filter(n -> n instanceof ReturnNode).findAny().get();
-    Node sideEffectPhi = retNode.predecessor(ReturnNode.SIDE_EFFECT);
-    visited.add(sideEffectPhi);
-    markSideEffectPhis(sideEffectPhi,  visited);
+      visited.add(graph.endBlock());
+      markSideEffectPhis(graph.endBlock(),  visited);
+      visited.clear();
 
-    visited.clear();
+
     visited.add(graph.endBlock());
     scan(graph.endBlock(), visited);
 
+    blocks.forEach(this::sort);
+
     return blocks;
   }
-  /*
+  private void sort(Block b) {
+    for (int i = 0; i < b.nodes().size(); i++) {
+        for (int j = 0; j < b.nodes().size(); j++) {
+          Node n1 = b.nodes().get(i);
+          Node n2 = b.nodes().get(j);
 
-  private List<Node> sort(Block b) {
-
-    Map<Node, Set<Node>> adjacencyList = new HashMap<>();
-    b.nodesWithPhis().forEach(node -> adjacencyList.computeIfAbsent(node, _ -> new HashSet<>()).
-      addAll(
-        node.predecessors().stream()
-          .filter(node2 -> node2.block().equals(b))
-          .collect(Collectors.toSet())));
-
-    List<Node> L =  new ArrayList<>();
-    Set<Node> S = new HashSet<>();
-    S.add(b.nodesWithPhis().getLast());
-
-    while (!S.isEmpty()) {
-      Node n = S.stream().findFirst().get();
-      L.add(n);
-      S.remove(n);
-
-      Set<Node> remove = new HashSet<>();
-      for (Node m : adjacencyList.get(n)) {
-        remove.add(m);
-
-        int incomingAmount = 0;
-        //if m has no other incoming edges
-        for (Map.Entry<Node, Set<Node>> e : adjacencyList.entrySet()) {
-          if (!e.getKey().equals(n)) {
-            if (e.getValue().contains(m)) {
-              incomingAmount++;
-            }
+          if (n1.predecessors().contains(n2) && i < j) {
+            //throw new IllegalArgumentException("Reordering Problem:" + n1 + " < " + n2);
           }
         }
+    }
+  }
 
-        if (incomingAmount == 0) {
-          S.add(m);
-        }
+  private void markSideEffectPhis(Node node, Set<Node> visited) {
+    if (node instanceof Phi phi) {
+      if (isSideEffectPhi(phi, new HashSet<>(Set.of(phi)))) {
+        phi.setSideEffectPhi();
       }
-      adjacencyList.get(n).removeAll(remove);
     }
 
-    adjacencyList.forEach((k, v) -> {
-      if (!v.isEmpty()) {
-        System.out.println(adjacencyList);
-        throw new IllegalArgumentException("Block graph contains cycles! Problem lies with the node: " + k);
+    for (Node pred : node.predecessors()) {
+      if (visited.add(pred)) {
+        markSideEffectPhis(pred, visited);
       }
-    });
+    }
 
-    return L.reversed();
+    if (visited.add(node.block()))
+      markSideEffectPhis(node.block(), visited);
   }
-  */
 
-  private boolean markSideEffectPhis(Node node, Set<Node> visited) {
+  private boolean isSideEffectPhi(Node node , Set<Node> visited) {
     if (node instanceof ProjNode proj) {
       return proj.projectionInfo() == ProjNode.SimpleProjectionInfo.SIDE_EFFECT;
     }
 
-    boolean sideEffectPhi = false;
-    for(Node preds : node.predecessors()) {
-      if (visited.add(preds)) {
-        sideEffectPhi = markSideEffectPhis(preds, visited);
+    boolean isSideEffectPhi = false;
+    for (Node pred : node.predecessors()) {
+      if (visited.add(pred)) {
+        if (isSideEffectPhi(pred, visited)) {
+          isSideEffectPhi = true;
+        }
       }
     }
 
-    if (node.predecessors().stream().filter(n -> n instanceof Phi).anyMatch(phi -> ((Phi) phi).isSideEffectPhi())) {
-      sideEffectPhi = true;
-    }
-
-    if (sideEffectPhi) {
-      if (node instanceof Phi phi) {
-        phi.setSideEffectPhi();
-      }
-    }
-    return sideEffectPhi;
+    return isSideEffectPhi;
   }
 
   private void scan(Node node, Set<Node> visited) {
