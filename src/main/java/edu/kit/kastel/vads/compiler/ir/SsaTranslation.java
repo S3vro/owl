@@ -296,6 +296,8 @@ public class SsaTranslation {
                 Node elseJmp = data.constructor.newJmp(afterIf);
                 afterIf.addPredecessor(elseJmp);
                 data.constructor.sealBlock(data.constructor.currentBlock());
+            } else {
+                afterIf.addPredecessor(falseProj);
             }
 
             afterIf.addPredecessor(jmpNode);

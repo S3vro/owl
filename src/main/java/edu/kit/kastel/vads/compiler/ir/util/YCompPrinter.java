@@ -223,7 +223,10 @@ public class YCompPrinter {
             case Block _ -> VcgColor.NORMAL;
             case ConstIntNode _ -> VcgColor.NORMAL;
             case ConstBoolNode _ -> VcgColor.NORMAL;
-            case Phi _ -> VcgColor.PHI;
+            case Phi phi -> {
+                if (phi.isSideEffectPhi()) yield VcgColor.MEMORY;
+                yield VcgColor.PHI;
+            }
             case ProjNode proj -> {
                 if (proj.projectionInfo() == SimpleProjectionInfo.SIDE_EFFECT) {
                     yield VcgColor.MEMORY;

@@ -124,6 +124,11 @@ public class CodeGenerator {
         Register src = registers.get(predecessorSkipProj(p, this.block.phiIndex(p)));
         Register target = registers.get(p);
 
+        if (src == null || target == null) {
+            System.err.println(predecessorSkipProj(p, this.block.phiIndex(p)));
+            throw new IllegalArgumentException("Register Operands are not allowed to be null +"+ p + "("+ src + " " + target + ")");
+        }
+
         return List.of(new x86Mov(src, HardwareRegister.EAX), new x86Mov(HardwareRegister.EAX
           , target));
     }
