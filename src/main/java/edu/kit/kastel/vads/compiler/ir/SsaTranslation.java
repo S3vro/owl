@@ -4,10 +4,12 @@ import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
 import edu.kit.kastel.vads.compiler.ir.node.ModNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
+import edu.kit.kastel.vads.compiler.ir.node.Phi;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfo;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfoHelper;
+import edu.kit.kastel.vads.compiler.lexer.Operator;
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
@@ -119,8 +121,47 @@ public class SsaTranslation {
             return NOT_AN_EXPRESSION;
         }
 
+        private Optional<Node> calculate_stepwise( BinaryOperationTree tree, SsaTranslation data) {
+            pushSpan(tree);
+            Node lhs = tree.lhs().accept(this, data).orElseThrow();
+
+            Block nextStepBlock = new Block(data.constructor.graph(), "stepwise_calculation_next_" + Math.abs(tree.hashCode()));
+            Block afterCalculation = new Block(data.constructor.graph(), "stepwise_calculation_after_" + Math.abs(tree.hashCode()));
+
+            boolean isLogicalAnd = tree.operatorType() == Operator.OperatorType.LOGICAL_AND;
+            Block caseTrue = isLogicalAnd ? nextStepBlock : afterCalculation;
+            Block caseFalse = isLogicalAnd ? afterCalculation : nextStepBlock;
+
+            Node conditionalNode = data.constructor.newIfNode(lhs, caseTrue, caseFalse);
+            Node trueProj = data.constructor.newControlFlowProj(conditionalNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(conditionalNode, ProjNode.SimpleProjectionInfo.CF_0);
+            nextStepBlock.addPredecessor(isLogicalAnd ? trueProj : falseProj);
+            data.constructor.sealBlock(nextStepBlock);
+            afterCalculation.addPredecessor(isLogicalAnd ? falseProj : trueProj);
+
+            data.constructor.switchBlock(nextStepBlock);
+            Node rhs = tree.rhs().accept(this, data).orElseThrow();
+            Node exitJmp = data.constructor.newJmp(afterCalculation);
+            afterCalculation.addPredecessor(exitJmp);
+            data.constructor.sealBlock(afterCalculation);
+
+            data.constructor.switchBlock(afterCalculation);
+            Phi phi = data.constructor.newPhi();
+            phi.appendOperand(lhs);
+            phi.appendOperand(rhs);
+
+            popSpan();
+
+            return Optional.of(data.constructor.tryRemoveTrivialPhi(phi));
+        }
+
         @Override
         public Optional<Node> visit(BinaryOperationTree binaryOperationTree, SsaTranslation data) {
+
+            if (binaryOperationTree.operatorType() == Operator.OperatorType.LOGICAL_AND || binaryOperationTree.operatorType() == Operator.OperatorType.LOGICAL_OR) {
+                return calculate_stepwise(binaryOperationTree, data);
+            }
+
             pushSpan(binaryOperationTree);
             Node lhs = binaryOperationTree.lhs().accept(this, data).orElseThrow();
             Node rhs = binaryOperationTree.rhs().accept(this, data).orElseThrow();
@@ -378,11 +419,11 @@ public class SsaTranslation {
             followBlock.addPredecessor(falseBlockExit);
             data.constructor.sealBlock(followBlock);
 
-            Node phi = data.constructor.newPhi();
+            Phi phi = data.constructor.newPhi();
             phi.addPredecessor(trueNode);
             phi.addPredecessor(falseNode);
 
-            return Optional.of(phi);
+            return Optional.of(data.constructor.tryRemoveTrivialPhi(phi));
         }
 
         @Override

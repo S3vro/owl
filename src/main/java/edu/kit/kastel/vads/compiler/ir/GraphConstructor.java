@@ -194,30 +194,28 @@ class GraphConstructor {
     }
 
     Node tryRemoveTrivialPhi(Phi phi) {
-        /*Node same = null;
-        for (Node op  : phi.predecessors()) {
-            if (op.equals(same) || op.equals(phi)) {
-                continue;
+        /*
+        List<? extends Node> otherNodes = new ArrayList<>(phi.predecessors());
+        otherNodes.remove(phi);
+
+        if (otherNodes.isEmpty()) {
+            return newUndef(otherNodes);
+        } else if (otherNodes.size() == 1) {
+            Node replaceBy = otherNodes.getFirst();
+            for (Node successor : graph.successors(phi)) {
+                for (int i = 0; i < successor.predecessors().size(); i++) {
+                    if (successor.predecessors().get(i).equals(phi)) {
+                        successor.setPredecessor(i, replaceBy);
+                        if (successor instanceof Phi succPhi && sealedBlocks.contains(successor.block())) {
+                            tryRemoveTrivialPhi(succPhi);
+                        }
+                    }
+                }
             }
 
-            if(same != null) {
-                return phi;
-            }
-
-            same = op;
+            return replaceBy;
         }
-        if (same == null) {
-            same = newUndef(phi.predecessors());
-        }
-
-        phi.replaceBy(same);
-
-        for (Node use : phi.users()) {
-            if (use instanceof Phi oPhi) {
-                tryRemoveTrivialPhi(oPhi);
-            }
-        }
-        return same;*/
+         */
         return phi;
     }
 

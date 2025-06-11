@@ -137,8 +137,13 @@ public class NodeCollector {
 
     if (node instanceof Phi phi && !phi.isSideEffectPhi()) {
       for (int i = 0; i < phi.predecessors().size(); i++) {
-        Block block = phi.block().predecessor(i).block();
-        block.addPhi(phi, i);
+        if (phi.block().predecessors().size() > i) {
+          Block block = phi.block().predecessor(i).block();
+          block.addPhi(phi, i);
+        } else {
+          System.err.println("[WARNING] This might need investiation. A phi did not make it to its block.");
+        }
+
       }
     }
   }
