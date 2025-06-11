@@ -6,14 +6,17 @@ import edu.kit.kastel.vads.compiler.ir.node.Phi;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.node.StartNode;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class NodeCollector {
 
   private final IrGraph graph;
   private final List<Block> blocks = new ArrayList<>();
+  private Map<Node, Integer> FINS;
 
   public NodeCollector(IrGraph graph) {
     this.graph = graph;
@@ -21,19 +24,19 @@ public class NodeCollector {
 
   public List<Block> collect() {
     Set<Node> visited = new HashSet<>();
-      visited.add(graph.endBlock());
-      markSideEffectPhis(graph.endBlock(),  visited);
-      visited.clear();
+    visited.add(graph.endBlock());
+    markSideEffectPhis(graph.endBlock(),  visited);
+    visited.clear();
 
 
     visited.add(graph.endBlock());
     scan(graph.endBlock(), visited);
 
-    blocks.forEach(this::sort);
+    blocks.forEach(this::toposort);
 
     return blocks;
   }
-  private void sort(Block b) {
+  private void checkOrdering(Block b) {
     for (int i = 0; i < b.nodes().size(); i++) {
       for (int j = 0; j < b.nodes().size(); j++) {
         Node n1 = b.nodes().get(i);
@@ -44,6 +47,39 @@ public class NodeCollector {
         }
       }
     }
+  }
+
+  private int current;
+  private List<Node> visited;
+
+  private void toposort(Block block) {
+    FINS = new HashMap<>();
+    visited = new ArrayList<>();
+    current = 0;
+    for (Node n : block.nodes()) {
+      if (!visited.contains(n)) {
+        dfs(n);
+      }
+    }
+
+    block.nodes().sort((x,y) -> Integer.compare(FINS.get(x), FINS.get(y)));
+
+    checkOrdering(block);
+  }
+
+  private void dfs(Node n) {
+    visited.add(n);
+    for (Node pred: n.predecessors()) {
+      if (pred.block() == n.block() && !(pred instanceof Phi)) {
+        if (!visited.contains(pred)) {
+          dfs(pred);
+        }
+      }
+
+    }
+
+    FINS.put(n, current);
+    current += 1;
   }
 
   private void markSideEffectPhis(Node node, Set<Node> visited) {
@@ -82,22 +118,14 @@ public class NodeCollector {
 
   private void scan(Node node, Set<Node> visited) {
 
-    //The order is important. Visit non sideeffect first!
     for (Node predecessor : node.predecessors()) {
-      if (!(predecessor instanceof ProjNode projNode) || projNode.projectionInfo() != ProjNode.SimpleProjectionInfo.SIDE_EFFECT) {
-      if (visited.add(predecessor))
+      if (visited.add(predecessor)) {
         scan(predecessor, visited);
       }
     }
 
     if (visited.add(node.block()))
       scan(node.block(), visited);
-
-    for (Node predecessor : node.predecessors()) {
-      if (visited.add(predecessor)) {
-        scan(predecessor, visited);
-      }
-    }
 
     if (node instanceof Block block) {
       this.blocks.add(block);

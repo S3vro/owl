@@ -38,6 +38,10 @@ public class IrGraph {
         return Set.copyOf(successors);
     }
 
+    public Set<Node> allNodes() {
+        return successors.keySet();
+    }
+
     public Block startBlock() {
         return this.startBlock;
     }

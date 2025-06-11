@@ -36,6 +36,8 @@ public class Lexer {
             case '{' -> separator(SeparatorType.BRACE_OPEN);
             case '}' -> separator(SeparatorType.BRACE_CLOSE);
             case ';' -> separator(SeparatorType.SEMICOLON);
+            case '?' -> separator(SeparatorType.SEMICOLON);
+            case ':' -> separator(SeparatorType.SEMICOLON);
             case '-' -> singleOrAssign(OperatorType.MINUS, OperatorType.ASSIGN_MINUS);
             case '+' -> singleOrAssign(OperatorType.PLUS, OperatorType.ASSIGN_PLUS);
             case '*' -> singleOrAssign(OperatorType.MUL, OperatorType.ASSIGN_MUL);
