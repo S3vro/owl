@@ -24,6 +24,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
 import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
+import edu.kit.kastel.vads.compiler.parser.ast.TernaryTree;
 import edu.kit.kastel.vads.compiler.parser.ast.Tree;
 import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
 import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
@@ -346,6 +347,41 @@ public class SsaTranslation {
             data.constructor.switchBlock(loopAfter);
             popSpan();
             return NOT_AN_EXPRESSION;
+        }
+
+        @Override
+        public Optional<Node> visit(TernaryTree ternaryTree, SsaTranslation data) {
+            Node condition = ternaryTree.condition().accept(this, data).orElseThrow();
+
+            Block ternaryTrue = new Block(data.constructor.graph(), "ternary_true_" + Math.abs(ternaryTree.hashCode()));
+            Block ternaryFalse = new Block(data.constructor.graph(), "ternary_false_" + Math.abs(ternaryTree.hashCode()));
+            Block followBlock = new Block(data.constructor.graph(), "ternary_follow_" + Math.abs(ternaryTree.hashCode()));
+
+            Node conditionalNode = data.constructor.newIfNode(condition, ternaryTrue, ternaryFalse);
+            Node trueProj = data.constructor.newControlFlowProj(conditionalNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(conditionalNode, ProjNode.SimpleProjectionInfo.CF_0);
+            ternaryTrue.addPredecessor(trueProj);
+            ternaryFalse.addPredecessor(falseProj);
+            data.constructor.sealBlock(ternaryTrue);
+            data.constructor.sealBlock(ternaryFalse);
+
+            data.constructor.switchBlock(ternaryTrue);
+            Node trueNode = ternaryTree.trueBranch().accept(this, data).orElseThrow();
+            Node trueBlockExit = data.constructor.newJmp(followBlock);
+            data.constructor.switchBlock(ternaryFalse);
+            Node falseNode = ternaryTree.falseBranch().accept(this, data).orElseThrow();
+            Node falseBlockExit = data.constructor.newJmp(followBlock);
+
+            data.constructor.switchBlock(followBlock);
+            followBlock.addPredecessor(trueBlockExit);
+            followBlock.addPredecessor(falseBlockExit);
+            data.constructor.sealBlock(followBlock);
+
+            Node phi = data.constructor.newPhi();
+            phi.addPredecessor(trueNode);
+            phi.addPredecessor(falseNode);
+
+            return Optional.of(phi);
         }
     }
 }

@@ -12,6 +12,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.LogicalNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
+import edu.kit.kastel.vads.compiler.parser.ast.TernaryTree;
 import edu.kit.kastel.vads.compiler.parser.ast.Tree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
@@ -138,6 +139,15 @@ public class Printer {
                 space();
                 printTree(body);
                 lineBreak();
+            }
+            case TernaryTree(var condition, var trueBranch, var falseBranch) -> {
+                printTree(condition);
+                print(" ? ");
+                printTree(trueBranch);
+                print(" : ");
+                printTree(falseBranch);
+                lineBreak();
+
             }
             case LValueIdentTree(var name) -> printTree(name);
             case IdentExpressionTree(var name) -> printTree(name);

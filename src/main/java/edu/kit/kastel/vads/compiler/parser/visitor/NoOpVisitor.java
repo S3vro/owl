@@ -15,6 +15,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
+import edu.kit.kastel.vads.compiler.parser.ast.TernaryTree;
 import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
 import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 
@@ -102,6 +103,11 @@ public interface NoOpVisitor<T> extends Visitor<T, Unit> {
     }
     @Override
     default Unit visit(LogicalNegateTree literalTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(TernaryTree ternaryTree, T data) {
         return Unit.INSTANCE;
     }
 }
