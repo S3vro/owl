@@ -31,10 +31,11 @@ public class LivenessAnalysis {
     public  Map<LivenessKey, Set<Node>> calculateLiveness(List<Block> blocks) {
         this.calcLive(blocks.reversed());
         Block startBlock = blocks.stream().filter(b -> b.predecessors().isEmpty()).findFirst().orElseThrow();
+        this.prettyPrint(blocks);
+
         if (!this.liveAt.get(new LivenessKey(startBlock, startBlock.nodesWithExitAndPhi().get(0))).isEmpty()) {
             throw new IllegalArgumentException("Liveness Analysis returned with values at the top");
         }
-        this.prettyPrint(blocks);
         return this.liveAt;
     }
 

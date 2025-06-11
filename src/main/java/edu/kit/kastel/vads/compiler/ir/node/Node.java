@@ -15,6 +15,7 @@ public sealed abstract class Node
     private final Block block;
     private final List<Node> predecessors = new ArrayList<>();
     private final DebugInfo debugInfo;
+    private final List<Node> successors = new ArrayList<>();
 
     protected Node(Block block, Node... predecessors) {
         this.graph = block.graph();
@@ -22,6 +23,7 @@ public sealed abstract class Node
         this.predecessors.addAll(List.of(predecessors));
         for (Node predecessor : predecessors) {
             graph.registerSuccessor(predecessor, this);
+            predecessor.addSuccessor(this);
         }
         this.debugInfo = DebugInfoHelper.getDebugInfo();
     }
@@ -45,6 +47,14 @@ public sealed abstract class Node
         return List.copyOf(this.predecessors);
     }
 
+    public final List<? extends Node> successors() {
+        return List.copyOf(this.successors);
+    }
+
+    public final void addSuccessor(Node successor) {
+        this.successors.add(successor);
+    }
+
     public final void setPredecessor(int idx, Node node) {
         this.graph.removeSuccessor(this.predecessors.get(idx), this);
         this.predecessors.set(idx, node);
@@ -56,6 +66,7 @@ public sealed abstract class Node
         if (node instanceof Phi phi) {
             phi.addUser(this);
         }
+        node.addSuccessor(this);
         this.predecessors.add(node);
         this.graph.registerSuccessor(node, this);
     }

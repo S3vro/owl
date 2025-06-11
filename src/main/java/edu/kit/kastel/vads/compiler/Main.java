@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
-    public static boolean DEBUG = false;
+    public static boolean DEBUG = true;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length != 2) {

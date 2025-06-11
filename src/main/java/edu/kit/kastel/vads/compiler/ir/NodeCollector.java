@@ -22,14 +22,15 @@ public class NodeCollector {
 
   public List<Block> collect() {
     Set<Node> visited = new HashSet<>();
-    visited.add(graph.endBlock());
-    scan(graph.endBlock(), visited);
-
-    visited.clear();
     Node retNode = graph.endBlock().predecessors().stream().filter(n -> n instanceof ReturnNode).findAny().get();
     Node sideEffectPhi = retNode.predecessor(ReturnNode.SIDE_EFFECT);
     visited.add(sideEffectPhi);
     markSideEffectPhis(sideEffectPhi,  visited);
+
+    visited.clear();
+    visited.add(graph.endBlock());
+    scan(graph.endBlock(), visited);
+
     return blocks;
   }
 
@@ -41,20 +42,33 @@ public class NodeCollector {
     boolean sideEffectPhi = false;
     for(Node preds : node.predecessors()) {
       if (visited.add(preds)) {
-        if (markSideEffectPhis(preds, visited) && node instanceof Phi phi) {
-          phi.setSideEffectPhi();
-          sideEffectPhi = true;
-        }
+        sideEffectPhi = markSideEffectPhis(preds, visited);
       }
     }
 
+    if (node.predecessors().stream().filter(n -> n instanceof Phi).anyMatch(phi -> ((Phi) phi).isSideEffectPhi())) {
+      sideEffectPhi = true;
+    }
+
+    if (sideEffectPhi) {
+      if (node instanceof Phi phi) {
+        phi.setSideEffectPhi();
+      }
+    }
     return sideEffectPhi;
   }
 
   private void scan(Node node, Set<Node> visited) {
-    if (node instanceof ProjNode proj)  {
+
+    if (node instanceof ProjNode proj) {
       if (proj.projectionInfo() == ProjNode.SimpleProjectionInfo.SIDE_EFFECT) {
-        return;
+          for (Node succ : proj.predecessor(ProjNode.IN).successors()) {
+            if (!succ.equals(proj)) {
+              if (!succ.successors().isEmpty()) {
+                return;
+              }
+            }
+          }
       }
     }
 
