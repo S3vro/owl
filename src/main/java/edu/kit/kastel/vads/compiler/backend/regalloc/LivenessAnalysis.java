@@ -4,7 +4,6 @@ import edu.kit.kastel.vads.compiler.Main;
 import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
-import edu.kit.kastel.vads.compiler.ir.node.ConditionalNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
@@ -53,7 +52,7 @@ public class LivenessAnalysis {
                 }
                 System.out.println(block.blockExit() + " | " + liveAt.get(new LivenessKey(block, block.blockExit())));
             }
-        System.out.println("-------------LIVENESS-------------");
+            System.out.println("-------------LIVENESS-------------");
         }
     }
 
@@ -73,15 +72,15 @@ public class LivenessAnalysis {
         while (changed ) {
             changed = false;
             for (Block block : blocks) {
-                    for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
-                        Node node = block.nodesWithExitAndPhi().get(i);
-                        Node nextNode = i >= block.nodesWithExitAndPhi().size() - 1 ? null : block.nodesWithExitAndPhi().get(i + 1);
+                for (int i = block.nodesWithExitAndPhi().size() - 1; i >= 0; i--) {
+                    Node node = block.nodesWithExitAndPhi().get(i);
+                    Node nextNode = i >= block.nodesWithExitAndPhi().size() - 1 ? null : block.nodesWithExitAndPhi().get(i + 1);
 
-                        Set<Node> liveAtSuc = new HashSet<>();
-                        for (LivenessKey succ : succ(node, nextNode, block)) {
-                            liveAtSuc.addAll(this.liveAt.computeIfAbsent(succ, _ -> new HashSet<>()));
-                            liveAtSuc.removeAll(defines(node));
-                        }
+                    Set<Node> liveAtSuc = new HashSet<>();
+                    for (LivenessKey succ : succ(node, nextNode, block)) {
+                        liveAtSuc.addAll(this.liveAt.computeIfAbsent(succ, _ -> new HashSet<>()));
+                        liveAtSuc.removeAll(defines(node));
+                    }
 
 
                         /*
@@ -94,19 +93,19 @@ public class LivenessAnalysis {
 
 
 
-                        this.liveOut.put(new LivenessKey(block, node), liveAtSuc);
-                        if (this.liveAt.get(new LivenessKey(block, node)).addAll(liveAtSuc)) {
-                            changed = true;
-                        }
+                    this.liveOut.put(new LivenessKey(block, node), liveAtSuc);
+                    if (this.liveAt.get(new LivenessKey(block, node)).addAll(liveAtSuc)) {
+                        changed = true;
                     }
                 }
             }
+        }
 
     }
 
     private Set<LivenessKey> succ(Node node, Node succ, Block block) {
         return switch(node) {
-            case Phi _, BinaryOperationNode _ , ConstIntNode _, ConstBoolNode _, ConditionalNode _ -> Set.of(new LivenessKey(block, succ));
+            case Phi _, BinaryOperationNode _ , ConstIntNode _, ConstBoolNode _ -> Set.of(new LivenessKey(block, succ));
             case JmpNode jmpNode -> Set.of(new LivenessKey(jmpNode.target(), jmpNode.target().nodesWithExitAndPhi().get(0)));
             case ConditionalJumpNode ifNode -> Set.of(
               new LivenessKey(ifNode.getThenBlock(),ifNode.getThenBlock().nodesWithExitAndPhi().get(0)),
@@ -125,7 +124,7 @@ public class LivenessAnalysis {
                 yield new HashSet<>(Set.of(usedVal));
             }
 
-            case ConditionalNode i -> new HashSet<>(Set.of(i.getCondition()));
+            case ConditionalJumpNode i -> new HashSet<>(Set.of(i.getCondition()));
 
             case Phi p -> {
                 Set<Node> used = new HashSet<>();
@@ -165,7 +164,7 @@ public class LivenessAnalysis {
         @Override
         public boolean equals(Object o) {
             if (!(o instanceof LivenessKey that)) return false;
-          return Objects.equals(node, that.node) && Objects.equals(block, that.block);
+            return Objects.equals(node, that.node) && Objects.equals(block, that.block);
         }
 
         @Override

@@ -26,13 +26,12 @@ import edu.kit.kastel.vads.compiler.ir.node.BitwiseAndNode;
 import edu.kit.kastel.vads.compiler.ir.node.BitwiseOrNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ComparisonNode;
-import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
-import edu.kit.kastel.vads.compiler.ir.node.ConditionalNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
 import edu.kit.kastel.vads.compiler.ir.node.GreaterThanNode;
 import edu.kit.kastel.vads.compiler.ir.node.GreaterThanOrEqualNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.LShiftNode;
 import edu.kit.kastel.vads.compiler.ir.node.LessThanNode;
@@ -75,19 +74,12 @@ public class CodeGenerator {
             Map<Node, Register> registers = allocator.allocateRegisters(functionBlocks);
 
             System.out.println("The stack is using: " + this.manager.getStackSize() + " bytes");
-            if (Main.DEBUG) {
-
-                System.out.println("-------------REGISTER-------------");
-                for (Map.Entry<Node, Register> entry : registers.entrySet()) {
-                    System.out.format("%s -> %s%n", entry.getKey(), entry.getValue());
-                }
-                System.out.println("-------------REGISTER-------------");
-            }
+            if ( Main.DEBUG) System.out.println(registers);
 
             //TODO: Function handling
             builder.append("\n_")
-                    .append("main")
-                    .append(":\n");
+              .append("main")
+              .append(":\n");
 
             this.manager.construct(builder);
             for (Block block : functionBlocks) {
@@ -98,7 +90,7 @@ public class CodeGenerator {
             for (Block block : functionBlocks) {
                 this.block = block;
                 block.nodesWithExitAndPhi().forEach(node ->
-                    blockMap.get(block).command(parseNode(node, registers))
+                  blockMap.get(block).command(parseNode(node, registers))
                 );
             }
 
@@ -120,12 +112,9 @@ public class CodeGenerator {
             case ReturnNode _ -> generateReturn(node, registers);
             case ConstIntNode c -> generateConst(c, registers);
             case ConstBoolNode c -> generateConst(c, registers);
-            case ConditionalNode i -> generateIf(i, registers);
+            case ConditionalJumpNode i -> generateIf(i, registers);
             case Phi p -> generatePhi(p, registers);
             case JmpNode j -> List.of(new x86Jump(j.target().getLabel()));
-            case ConditionalJumpNode j -> List.of(
-              new x86Jump(j.getThenBlock().getLabel())
-            );
             default -> List.of();
         };
     }
@@ -140,19 +129,16 @@ public class CodeGenerator {
             throw new IllegalArgumentException("Register Operands are not allowed to be null +"+ p + "("+ src + " " + target + ")");
         }
 
-        if (src instanceof StackRegister && target instanceof StackRegister) {
-            return List.of(new x86Mov(src, HardwareRegister.EAX), new x86Mov(HardwareRegister.EAX
-              , target));
-        } else {
-            return List.of(new x86Mov(src, target));
-        }
+        return List.of(new x86Mov(src, HardwareRegister.EAX), new x86Mov(HardwareRegister.EAX
+          , target));
     }
 
-    private List<x86Instruction> generateIf(ConditionalNode node, Map<Node, Register> registers) {
+    private List<x86Instruction> generateIf(ConditionalJumpNode node, Map<Node, Register> registers) {
         List<x86Instruction> instructions = new ArrayList<>();
         Register condition = registers.get(node.getCondition());
         instructions.addAll(new x86Test(condition).generate());
         instructions.add(new x86JE(node.getElseBlock().getLabel()));
+        instructions.add(new x86Jump(node.getThenBlock().getLabel()));
         return instructions;
     }
 

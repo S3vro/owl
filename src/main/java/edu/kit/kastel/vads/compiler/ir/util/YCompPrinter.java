@@ -3,7 +3,6 @@ package edu.kit.kastel.vads.compiler.ir.util;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
-import edu.kit.kastel.vads.compiler.ir.node.ConditionalNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
@@ -237,7 +236,6 @@ public class YCompPrinter {
                     yield VcgColor.CONTROL_FLOW;
                 }
             }
-            case ConditionalNode _ -> VcgColor.NORMAL;
             case UndefNode _ -> VcgColor.SPECIAL;
             case ControlFlowNode _ -> VcgColor.CONTROL_FLOW;
             case StartNode _ -> VcgColor.CONTROL_FLOW;
