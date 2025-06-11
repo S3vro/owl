@@ -5,6 +5,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
@@ -175,6 +176,26 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
         r = ternaryTree.falseBranch().accept(this, accumulate(data, r));
 
         r = this.visitor.visit(ternaryTree, accumulate(data, r));
+        return r;
+    }
+
+    @Override
+    public R visit(ForTree forTree, T data) {
+        R r;
+        if (forTree.definition().isPresent()) {
+            r = forTree.definition().get().accept(this, data);
+            r = forTree.condition().accept(this, accumulate(data, r));
+        } else {
+            r = forTree.condition().accept(this, data);
+        }
+
+        if (forTree.statement().isPresent()) {
+            r = forTree.statement().get().accept(this, accumulate(data, r));
+        }
+
+        r = forTree.body().accept(this, accumulate(data, r));
+
+        r = this.visitor.visit(forTree, accumulate(data, r));
         return r;
     }
 }

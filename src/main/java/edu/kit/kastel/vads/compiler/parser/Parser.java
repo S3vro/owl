@@ -16,6 +16,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ExpressionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
@@ -99,12 +100,40 @@ public class Parser {
         }
         else if (this.tokenSource.peek().isKeyword(KeywordType.WHILE)) {
             return parseWhile();
+        }
+        else if (this.tokenSource.peek().isKeyword(KeywordType.FOR)) {
+            return parseFor();
         } else {
             statement = parseSimple();
         }
 
         this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
         return statement;
+    }
+
+    private StatementTree parseFor() {
+        Keyword word = this.tokenSource.expectKeyword(KeywordType.FOR);
+        Optional<StatementTree> definition = Optional.empty();
+        Optional<StatementTree> statement = Optional.empty();
+        this.tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
+        if (!tokenSource.peek().isSeparator(SeparatorType.SEMICOLON)) {
+            if (this.tokenSource.peek().isType()) {
+                definition = Optional.of(parseDeclaration());
+            } else {
+                definition = Optional.of(parseSimple());
+            }
+        }
+        this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+        ExpressionTree condition = this.parseExpression();
+        this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+        if (!tokenSource.peek().isSeparator(SeparatorType.PAREN_CLOSE)) {
+            statement = Optional.of(parseSimple());
+        }
+        this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+
+        StatementTree body = parseStatement();
+
+        return new ForTree(definition, condition, statement, body, word.span().start());
     }
 
     private StatementTree parseWhile(){

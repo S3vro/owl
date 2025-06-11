@@ -13,6 +13,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
@@ -382,6 +383,59 @@ public class SsaTranslation {
             phi.addPredecessor(falseNode);
 
             return Optional.of(phi);
+        }
+
+        @Override
+        public Optional<Node> visit(ForTree forTree, SsaTranslation data) {
+            pushSpan(forTree);
+            if (forTree.definition().isPresent()) {
+                forTree.definition().get().accept(this, data);
+            }
+            data.constructor.sealBlock(data.constructor.currentBlock());
+
+            Block loopCondition = new Block(data.constructor.graph(), "for_" + Math.abs(forTree.hashCode()));
+            Block step = new Block(data.constructor.graph(), "for_step" + Math.abs(forTree.hashCode()));
+            Block loopBody = new Block(data.constructor.graph(), "for_body_" + Math.abs(forTree.hashCode()));
+            Block loopAfter = new Block(data.constructor.graph(), "for_after_" + Math.abs(forTree.hashCode()));
+
+            //Jump Into
+            Node entry = data.constructor.newJmp(loopCondition);
+            loopCondition.addPredecessor(entry);
+
+            //Generate Condition
+            data.constructor.switchBlock(loopCondition);
+            Node condition = forTree.condition().accept(this, data).orElseThrow();
+            Node ifNode = data.constructor.newIfNode(condition, loopBody, loopAfter);
+            //Generate true and false paths
+            Node trueProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_0);
+
+            //Loop After Block
+            loopAfter.addPredecessor(falseProj);
+
+            //Body Block
+            loopBody.addPredecessor(trueProj);
+
+            data.constructor.switchBlock(step);
+            if (forTree.statement().isPresent()) {
+                forTree.statement().get().accept(this, data);
+            }
+            Node backToLoop = data.constructor.newJmp(loopCondition);
+            loopCondition.addPredecessor(backToLoop);
+
+            data.constructor.switchBlock(loopBody);
+            forTree.body().accept(this, data);
+            step.addPredecessor(data.constructor.newJmp(step));
+
+
+            data.constructor.sealBlock(loopCondition);
+            data.constructor.sealBlock(step);
+            data.constructor.sealBlock(loopBody);
+            data.constructor.sealBlock(loopAfter);
+
+            data.constructor.switchBlock(loopAfter);
+            popSpan();
+            return NOT_AN_EXPRESSION;
         }
     }
 }
