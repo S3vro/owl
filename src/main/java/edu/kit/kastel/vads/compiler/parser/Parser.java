@@ -12,6 +12,7 @@ import edu.kit.kastel.vads.compiler.lexer.Separator.SeparatorType;
 import edu.kit.kastel.vads.compiler.lexer.Token;
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
@@ -126,9 +127,15 @@ public class Parser {
         this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
         ExpressionTree condition = this.parseExpression();
         this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
-        if (!tokenSource.peek().isSeparator(SeparatorType.PAREN_CLOSE)) {
-            statement = Optional.of(parseSimple());
+        //TODO: Changeback
+        if (!tokenSource.peek().isSeparator(SeparatorType.SEMICOLON)) {
+            if (this.tokenSource.peek().isType()) {
+                statement = Optional.of(parseDeclaration());
+            } else {
+                statement = Optional.of(parseSimple());
+            }
         }
+
         this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
 
         StatementTree body = parseStatement();
@@ -268,6 +275,10 @@ public class Parser {
             case Operator(var type, _) when type == OperatorType.LOGICAL_NOT -> {
                 Span span = this.tokenSource.consume().span();
                 yield new LogicalNegateTree(parseFactor(), span);
+            }
+            case Operator(var type, _) when type == OperatorType.BITWISE_NOT -> {
+                Span span = this.tokenSource.consume().span();
+                yield new BitwiseNegateTree(parseFactor(), span);
             }
             case Identifier ident -> {
                 this.tokenSource.consume();

@@ -12,6 +12,7 @@ import edu.kit.kastel.vads.compiler.ir.util.DebugInfoHelper;
 import edu.kit.kastel.vads.compiler.lexer.Operator;
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
@@ -477,6 +478,16 @@ public class SsaTranslation {
             data.constructor.switchBlock(loopAfter);
             popSpan();
             return NOT_AN_EXPRESSION;
+        }
+
+        @Override
+        public Optional<Node> visit(BitwiseNegateTree negateTree, SsaTranslation data) {
+            pushSpan(negateTree);
+            Node node = negateTree.expression().accept(this, data).orElseThrow();
+            Node res = data.constructor.newXor(data.constructor.newConstInt(-1), node);
+            popSpan();
+            return Optional.of(res);
+
         }
     }
 }

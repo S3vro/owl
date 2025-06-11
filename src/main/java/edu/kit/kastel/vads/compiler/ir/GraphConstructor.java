@@ -110,7 +110,11 @@ class GraphConstructor {
     }
 
     public Node newIfNode(Node exp, Block thenBlock, Block elseBlock) {
-        return new ConditionalJumpNode(currentBlock(), exp, thenBlock, elseBlock);
+        Node condition = new ConditionalNode(currentBlock(), exp, thenBlock, elseBlock);
+        condition.addPredecessor(exp);
+        Node jmp = new ConditionalJumpNode(currentBlock(), exp, thenBlock, elseBlock);
+        jmp.addPredecessor(condition);
+        return jmp;
     }
 
     public Node newConstInt(int value) {

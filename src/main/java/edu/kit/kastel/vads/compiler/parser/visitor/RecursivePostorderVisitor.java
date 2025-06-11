@@ -2,6 +2,7 @@ package edu.kit.kastel.vads.compiler.parser.visitor;
 
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
@@ -114,6 +115,14 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
     public R visit(LogicalNegateTree negateTree, T data) {
         R r = negateTree.expression().accept(this, data);
         r = this.visitor.visit(negateTree, accumulate(data, r));
+        return r;
+    }
+
+    @Override
+    public R visit(BitwiseNegateTree bitwiseNegateTree, T data) {
+        R r = bitwiseNegateTree.expression().accept(this, data);
+        r = this.visitor.visit(bitwiseNegateTree, accumulate(data, r));
+
         return r;
     }
 

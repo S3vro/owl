@@ -4,6 +4,7 @@ import edu.kit.kastel.vads.compiler.Main;
 import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConditionalNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
@@ -105,7 +106,7 @@ public class LivenessAnalysis {
 
     private Set<LivenessKey> succ(Node node, Node succ, Block block) {
         return switch(node) {
-            case Phi _, BinaryOperationNode _ , ConstIntNode _, ConstBoolNode _ -> Set.of(new LivenessKey(block, succ));
+            case Phi _, BinaryOperationNode _ , ConstIntNode _, ConstBoolNode _, ConditionalNode _ -> Set.of(new LivenessKey(block, succ));
             case JmpNode jmpNode -> Set.of(new LivenessKey(jmpNode.target(), jmpNode.target().nodesWithExitAndPhi().get(0)));
             case ConditionalJumpNode ifNode -> Set.of(
               new LivenessKey(ifNode.getThenBlock(),ifNode.getThenBlock().nodesWithExitAndPhi().get(0)),
@@ -124,7 +125,7 @@ public class LivenessAnalysis {
                 yield new HashSet<>(Set.of(usedVal));
             }
 
-            case ConditionalJumpNode i -> new HashSet<>(Set.of(i.getCondition()));
+            case ConditionalNode i -> new HashSet<>(Set.of(i.getCondition()));
 
             case Phi p -> {
                 Set<Node> used = new HashSet<>();

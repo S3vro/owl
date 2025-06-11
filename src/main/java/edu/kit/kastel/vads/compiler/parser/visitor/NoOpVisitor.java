@@ -2,6 +2,7 @@ package edu.kit.kastel.vads.compiler.parser.visitor;
 
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
@@ -114,6 +115,11 @@ public interface NoOpVisitor<T> extends Visitor<T, Unit> {
 
     @Override
     default Unit visit(ForTree forTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(BitwiseNegateTree forTree, T data) {
         return Unit.INSTANCE;
     }
 }
