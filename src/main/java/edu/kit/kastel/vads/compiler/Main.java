@@ -24,7 +24,6 @@ import java.util.List;
 
 public class Main {
     public static boolean DEBUG = false;
-
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length != 2) {
             System.err.println("Invalid arguments: Expected one input file and one output file");

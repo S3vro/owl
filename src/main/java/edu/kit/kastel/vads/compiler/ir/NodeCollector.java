@@ -112,8 +112,9 @@ public class NodeCollector {
   private void scan(Node node, Set<Node> visited) {
 
     //The order is important. Visit non sideeffect first!
-    for (Node predecessor : node.predecessors().reversed()) {
-      if (visited.add(predecessor)) {
+    for (Node predecessor : node.predecessors()) {
+      if (visited.add(predecessor) &&
+        (!(predecessor instanceof ProjNode projNode) || projNode.projectionInfo() != ProjNode.SimpleProjectionInfo.SIDE_EFFECT)) {
         scan(predecessor, visited);
       }
     }
@@ -121,6 +122,11 @@ public class NodeCollector {
     if (visited.add(node.block()))
       scan(node.block(), visited);
 
+    for (Node predecessor : node.predecessors()) {
+      if (visited.add(predecessor)) {
+        scan(predecessor, visited);
+      }
+    }
 
     if (node instanceof Block block) {
       this.blocks.add(block);
