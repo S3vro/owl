@@ -35,14 +35,14 @@ public class NodeCollector {
   }
   private void sort(Block b) {
     for (int i = 0; i < b.nodes().size(); i++) {
-        for (int j = 0; j < b.nodes().size(); j++) {
-          Node n1 = b.nodes().get(i);
-          Node n2 = b.nodes().get(j);
+      for (int j = 0; j < b.nodes().size(); j++) {
+        Node n1 = b.nodes().get(i);
+        Node n2 = b.nodes().get(j);
 
-          if (n1.predecessors().contains(n2) && i < j) {
-            //throw new IllegalArgumentException("Reordering Problem:" + n1 + " < " + n2);
-          }
+        if (n1.predecessors().contains(n2) && i < j) {
+          throw new IllegalArgumentException("Reordering Problem:" + n1 + " < " + n2);
         }
+      }
     }
   }
 

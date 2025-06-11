@@ -29,8 +29,9 @@ public final class Block extends Node {
     }
 
     public List<Node> nodes() {
-        return List.copyOf(nodes);
+        return nodes;
     }
+
 
     public void addPhi(Phi phi, int index) {
         this.phis.put(phi, index);
