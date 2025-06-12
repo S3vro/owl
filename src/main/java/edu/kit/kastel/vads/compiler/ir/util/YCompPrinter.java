@@ -7,6 +7,7 @@ import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
 import edu.kit.kastel.vads.compiler.ir.node.ControlFlowNode;
+import edu.kit.kastel.vads.compiler.ir.node.InCodeJmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.Phi;
@@ -172,7 +173,7 @@ public class YCompPrinter {
         StringJoiner result = new StringJoiner("\n");
         List<? extends Node> parents = block.predecessors();
         for (Node parent : parents) {
-            if (parent instanceof ReturnNode ||parent instanceof JmpNode || parent instanceof ConditionalJumpNode || (parent instanceof ProjNode p && (p.projectionInfo() == SimpleProjectionInfo.CF_0 || p.projectionInfo() == SimpleProjectionInfo.CF_1))) {
+            if (parent instanceof InCodeJmpNode|| parent instanceof ReturnNode ||parent instanceof JmpNode || parent instanceof ConditionalJumpNode || (parent instanceof ProjNode p && (p.projectionInfo() == SimpleProjectionInfo.CF_0 || p.projectionInfo() == SimpleProjectionInfo.CF_1))) {
                 // Return needs no label
                 result.add(formatControlflowEdge(parent, block, ""));
             } else {
@@ -236,6 +237,7 @@ public class YCompPrinter {
                     yield VcgColor.CONTROL_FLOW;
                 }
             }
+            case InCodeJmpNode _ -> VcgColor.CONTROL_FLOW;
             case UndefNode _ -> VcgColor.SPECIAL;
             case ControlFlowNode _ -> VcgColor.CONTROL_FLOW;
             case StartNode _ -> VcgColor.CONTROL_FLOW;

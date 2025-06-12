@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class NodeCollector {
 
@@ -34,8 +35,11 @@ public class NodeCollector {
 
     blocks.forEach(this::toposort);
 
-    return blocks;
+    return blocks.stream()
+      .filter(block -> !block.predecessors().isEmpty() || block.equals(graph.startBlock()))
+      .collect(Collectors.toList());
   }
+
   private void checkOrdering(Block b) {
     for (int i = 0; i < b.nodes().size(); i++) {
       for (int j = 0; j < b.nodes().size(); j++) {
@@ -141,7 +145,7 @@ public class NodeCollector {
           Block block = phi.block().predecessor(i).block();
           block.addPhi(phi, i);
         } else {
-          System.err.println("[WARNING] This might need investiation. A phi did not make it to its block.");
+          System.err.println("[WARNING] This might need investigation. A phi did not make it to its block.");
         }
 
       }

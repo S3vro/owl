@@ -15,6 +15,8 @@ import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
@@ -366,6 +368,7 @@ public class SsaTranslation {
             Node jmpCondition = data.constructor.newJmp(loopCondition);
             loopCondition.addPredecessor(jmpCondition);
             data.constructor.switchBlock(loopCondition);
+            data.constructor.pushLoopStart(loopCondition);
             Node condition = whileTree.condition().accept(this, data).orElseThrow();
             Node ifNode = data.constructor.newIfNode(condition, loopBody, loopAfter);
             //Generate true and false paths
@@ -374,18 +377,23 @@ public class SsaTranslation {
 
             //Loop After Block
             loopAfter.addPredecessor(falseProj);
+            data.constructor.pushLoopEnd(loopAfter);
 
             //Body Block
             loopBody.addPredecessor(trueProj);
             data.constructor.sealBlock(loopBody);
             data.constructor.switchBlock(loopBody);
             whileTree.body().accept(this, data);
+            Node jmp = data.constructor.newJmp(loopCondition);
             data.constructor.sealBlock(data.constructor.currentBlock());
-            loopCondition.addPredecessor(data.constructor.newJmp(loopCondition));
+            loopCondition.addPredecessor(jmp);
 
 
+            data.constructor.popLoopStart();
             data.constructor.sealBlock(loopCondition);
+            data.constructor.popLoopEnd();
             data.constructor.sealBlock(loopAfter);
+
 
             data.constructor.switchBlock(loopAfter);
             popSpan();
@@ -439,6 +447,8 @@ public class SsaTranslation {
             Block step = new Block(data.constructor.graph(), "for_step" + Math.abs(forTree.hashCode()));
             Block loopBody = new Block(data.constructor.graph(), "for_body_" + Math.abs(forTree.hashCode()));
             Block loopAfter = new Block(data.constructor.graph(), "for_after_" + Math.abs(forTree.hashCode()));
+            data.constructor.pushLoopEnd(loopAfter);
+            data.constructor.pushLoopStart(step);
 
             //Jump Into
             Node entry = data.constructor.newJmp(loopCondition);
@@ -475,6 +485,9 @@ public class SsaTranslation {
             data.constructor.sealBlock(loopBody);
             data.constructor.sealBlock(loopAfter);
 
+            data.constructor.popLoopEnd();
+            data.constructor.popLoopStart();
+
             data.constructor.switchBlock(loopAfter);
             popSpan();
             return NOT_AN_EXPRESSION;
@@ -488,6 +501,30 @@ public class SsaTranslation {
             popSpan();
             return Optional.of(res);
 
+        }
+
+        @Override
+        public Optional<Node> visit(ContinueTree continueTree, SsaTranslation data) {
+            pushSpan(continueTree);
+            Node jmpNode = data.constructor.newJmp(data.constructor.getLoopStart());
+            data.constructor.getLoopStart().addPredecessor(jmpNode);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+            Block newBlock = new Block(data.constructor.graph(), "after_continue_" + Math.abs(continueTree.hashCode()));
+            data.constructor.switchBlock(newBlock);
+            popSpan();
+            return NOT_AN_EXPRESSION;
+        }
+
+        @Override
+        public Optional<Node> visit(BreakTree breakTree, SsaTranslation data) {
+            pushSpan(breakTree);
+            Node jmpNode = data.constructor.newJmp(data.constructor.getLoopEnd());
+            data.constructor.getLoopEnd().addPredecessor(jmpNode);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+            Block newBlock = new Block(data.constructor.graph(), "after_break_" + Math.abs(breakTree.hashCode()));
+            data.constructor.switchBlock(newBlock);
+            popSpan();
+            return NOT_AN_EXPRESSION;
         }
     }
 }

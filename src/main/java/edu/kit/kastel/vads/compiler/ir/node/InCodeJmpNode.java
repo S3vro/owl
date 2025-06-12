@@ -1,10 +1,10 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
-public final class JENode extends ControlFlowNode {
+public final class InCodeJmpNode extends Node {
 
     private final Block target;
 
-    public JENode(Block block, Block target) {
+    public InCodeJmpNode(Block block, Block target) {
         super(block);
         this.target = target;
     }

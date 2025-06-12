@@ -15,6 +15,8 @@ import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ExpressionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
@@ -95,6 +97,15 @@ public class Parser {
 
         } else if (this.tokenSource.peek().isSeparator(SeparatorType.BRACE_OPEN)) {
             return parseBlock();
+        }
+        else if(this.tokenSource.peek().isKeyword(KeywordType.BREAK)) {
+            Keyword word = this.tokenSource.expectKeyword(KeywordType.BREAK);
+            this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+            return new BreakTree(word.span());
+        } else if(this.tokenSource.peek().isKeyword(KeywordType.CONTINUE)) {
+            Keyword word = this.tokenSource.expectKeyword(KeywordType.CONTINUE);
+            this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+            return new ContinueTree(word.span());
         }
         else if (this.tokenSource.peek().isKeyword(KeywordType.IF)) {
             return parseIf();

@@ -16,6 +16,10 @@ class GraphConstructor {
     private final Map<Block, Phi> incompleteSideEffectPhis = new HashMap<>();
     private final Set<Block> sealedBlocks = new HashSet<>();
     private Block currentBlock;
+    private final Stack<Block> loopEnds = new Stack<>();
+    private final Stack<Block> loopStarts = new Stack<>();
+
+
 
     public GraphConstructor(List<Optimizer> optimizer, String name) {
         this.optimizer = optimizer;
@@ -37,6 +41,30 @@ class GraphConstructor {
 
     public void switchBlock(Block block) {
         this.currentBlock = block;
+    }
+
+    public void pushLoopEnd(Block block) {
+        loopEnds.push(block);
+    }
+
+    public void pushLoopStart(Block block) {
+        loopStarts.push(block);
+    }
+
+    public Block popLoopEnd() {
+        return loopEnds.pop();
+    }
+
+    public Block popLoopStart() {
+        return loopStarts.pop();
+    }
+
+    public Block getLoopEnd() {
+        return loopEnds.peek();
+    }
+
+    public Block getLoopStart() {
+        return loopStarts.peek();
     }
 
     public Node newStart() {
@@ -106,11 +134,11 @@ class GraphConstructor {
     }
 
     public Node newReturn(Node result) {
-        return new ReturnNode(currentBlock(), readCurrentSideEffect(), result);
+        return this.optimize(new ReturnNode(currentBlock(), readCurrentSideEffect(), result));
     }
 
     public Node newIfNode(Node exp, Block thenBlock, Block elseBlock) {
-        return new ConditionalJumpNode(currentBlock(), exp, thenBlock, elseBlock);
+        return this.optimize(new ConditionalJumpNode(currentBlock(), exp, thenBlock, elseBlock));
     }
 
     public Node newConstInt(int value) {
@@ -125,24 +153,21 @@ class GraphConstructor {
     }
 
     public Node newSideEffectProj(Node node) {
-        return new ProjNode(currentBlock(), node, ProjNode.SimpleProjectionInfo.SIDE_EFFECT);
+        return this.optimize(new ProjNode(currentBlock(), node, ProjNode.SimpleProjectionInfo.SIDE_EFFECT));
     }
 
     public Node newControlFlowProj(Node node, ProjNode.SimpleProjectionInfo type) {
-        return new ProjNode(currentBlock(), node, type);
+        return this.optimize(new ProjNode(currentBlock(), node, type));
     }
 
     public Node newResultProj(Node node) {
-        return new ProjNode(currentBlock(), node, ProjNode.SimpleProjectionInfo.RESULT);
+        return this.optimize(new ProjNode(currentBlock(), node, ProjNode.SimpleProjectionInfo.RESULT));
     }
 
     public Node newJmp(Block target) {
-        return new JmpNode(currentBlock(), target);
+        return this.optimize(new JmpNode(currentBlock(), target));
     }
 
-    public Node newUndef(List<? extends Node> node) {
-        return new UndefNode(currentBlock(), (Node[]) node.toArray());
-    }
     public Block currentBlock() {
         return this.currentBlock;
     }

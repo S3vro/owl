@@ -5,6 +5,8 @@ import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
@@ -169,6 +171,14 @@ public class Printer {
                 print(")");
                 space();
                 printTree(body);
+                lineBreak();
+            }
+            case BreakTree(_) -> {
+                print("break");
+                lineBreak();
+            }
+            case ContinueTree(_) -> {
+                print("continue");
                 lineBreak();
             }
             case LValueIdentTree(var name) -> printTree(name);

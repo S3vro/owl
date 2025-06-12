@@ -32,6 +32,7 @@ import edu.kit.kastel.vads.compiler.ir.node.DivNode;
 import edu.kit.kastel.vads.compiler.ir.node.GreaterThanNode;
 import edu.kit.kastel.vads.compiler.ir.node.GreaterThanOrEqualNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
+import edu.kit.kastel.vads.compiler.ir.node.InCodeJmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.LShiftNode;
 import edu.kit.kastel.vads.compiler.ir.node.LessThanNode;
@@ -119,6 +120,7 @@ public class CodeGenerator {
             case ConstIntNode c -> generateConst(c, registers);
             case ConstBoolNode c -> generateConst(c, registers);
             case ConditionalJumpNode i -> generateIf(i, registers);
+            case InCodeJmpNode j -> List.of(new x86Jump(j.target().getLabel()));
             case Phi p -> generatePhi(p, registers);
             case JmpNode j -> List.of(new x86Jump(j.target().getLabel()));
             default -> List.of();

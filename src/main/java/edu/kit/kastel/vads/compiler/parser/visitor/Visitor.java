@@ -5,6 +5,8 @@ import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
@@ -62,4 +64,8 @@ public interface Visitor<T, R> {
     R visit(ForTree forTree, T data);
 
     R visit(BitwiseNegateTree forTree, T data);
+
+    R visit(BreakTree breakTree, T data);
+
+    R visit(ContinueTree continueTree, T data);
 }

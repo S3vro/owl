@@ -6,6 +6,7 @@ import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
+import edu.kit.kastel.vads.compiler.ir.node.InCodeJmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.Phi;
@@ -112,6 +113,7 @@ public class LivenessAnalysis {
               new LivenessKey(ifNode.getElseBlock(),ifNode.getElseBlock().nodesWithExitAndPhi().get(0))
             );
             case ReturnNode _ -> Set.of();
+            case InCodeJmpNode jmpNode -> Set.of(new LivenessKey(jmpNode.target(), jmpNode.target().nodesWithExitAndPhi().get(0)));
             default -> throw new UnsupportedOperationException(node + " is not handled");
         };
     }
