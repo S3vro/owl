@@ -194,6 +194,7 @@ class GraphConstructor {
     }
 
     Node tryRemoveTrivialPhi(Phi phi) {
+        /*
         List<? extends Node> otherNodes = new ArrayList<>(phi.predecessors());
         otherNodes.remove(phi);
 
@@ -214,6 +215,7 @@ class GraphConstructor {
 
             return replaceBy;
         }
+         */
         return phi;
     }
 

@@ -74,7 +74,13 @@ public class CodeGenerator {
             Map<Node, Register> registers = allocator.allocateRegisters(functionBlocks);
 
             System.out.println("The stack is using: " + this.manager.getStackSize() + " bytes");
-            if ( Main.DEBUG) System.out.println(registers);
+           if (Main.DEBUG) {
+                System.out.println("-------------REGISTER-------------");
+                for (Map.Entry<Node, Register> entry : registers.entrySet()) {
+                    System.out.format("%s -> %s%n", entry.getKey(), entry.getValue());
+                }
+                System.out.println("-------------REGISTER-------------");
+            }
 
             //TODO: Function handling
             builder.append("\n_")

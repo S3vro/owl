@@ -38,10 +38,10 @@ public enum HardwareRegister implements Register {
             case R9D -> "r9b";
             case R10D -> "r10b";
             case R11D -> "r11b";
-            case R12D -> "r13b";
-            case R13D -> "r14b";
-            case R14D -> "r15b";
-            case R15D -> "al";
+            case R12D -> "r12b";
+            case R13D -> "r13b";
+            case R14D -> "r14b";
+            case R15D -> "r15b";
             case RSP -> "spl";
             case RBP -> "bpl";
         };
