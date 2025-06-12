@@ -277,11 +277,14 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
                 throw new SemanticException("Variable " + name + " was not declared in this scope, but you are trying to define it");
             }
 
+
+
+            List<Scope> copiedScopes = new ArrayList<>(scopes);
             Scope copied = this.scopes.getLast().copy();
             copied.definitions().add(name);
-            scopes.removeLast();
-            scopes.addLast(copied);
-            return new VariableStatus(scopes);
+            copiedScopes.removeLast();
+            copiedScopes.addLast(copied);
+            return new VariableStatus(copiedScopes);
         }
 
         public VariableStatus declare(Name name) {
@@ -289,11 +292,12 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
                 throw new SemanticException("Variable " + name + " already declared!");
             }
 
+            List<Scope> copiedScopes = new ArrayList<>(scopes);
             Scope copied = this.scopes.getLast().copy();
             copied.declarations().add(name);
-            scopes.removeLast();
-            scopes.addLast(copied);
-            return new VariableStatus(scopes);
+            copiedScopes.removeLast();
+            copiedScopes.addLast(copied);
+            return new VariableStatus(copiedScopes);
 
         }
 
@@ -314,11 +318,12 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
             Set<Name> filtered = allDeclarations.stream().filter(name -> !defined(name)).collect(Collectors.toSet());
 
 
+            List<Scope> copiedScopes = new ArrayList<>(scopes);
             Scope copied = this.scopes.getLast().copy();
             copied.definitions().addAll(filtered);
-            scopes.removeLast();
-            scopes.addLast(copied);
-            return new VariableStatus(scopes);
+            copiedScopes.removeLast();
+            copiedScopes.addLast(copied);
+            return new VariableStatus(copiedScopes);
         }
 
         public VariableStatus calculateIf(VariableStatus afterThen) {
