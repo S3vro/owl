@@ -26,7 +26,11 @@ public class IrGraph {
     }
 
     public void removeSuccessor(Node node, Node oldSuccessor) {
-        this.successors.computeIfAbsent(node, _ -> new LinkedHashSet<>()).remove(oldSuccessor);
+        Set<Node> succSet = this.successors.computeIfAbsent(node, _ -> new LinkedHashSet<>());
+        succSet.remove(oldSuccessor);
+        if (succSet.isEmpty()) {
+            this.successors.remove(node);
+        }
     }
 
     /// {@return the set of nodes that have the given node as one of their inputs}
@@ -38,8 +42,8 @@ public class IrGraph {
         return Set.copyOf(successors);
     }
 
-    public Set<Node> allNodes() {
-        return successors.keySet();
+    public Map<Node, SequencedSet<Node>> allSuccessors() {
+        return this.successors;
     }
 
     public Block startBlock() {

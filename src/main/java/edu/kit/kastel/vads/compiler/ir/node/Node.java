@@ -91,4 +91,16 @@ public sealed abstract class Node
     protected static int predecessorHash(Node node, int predecessor) {
         return System.identityHashCode(node.predecessor(predecessor));
     }
+
+    public void removePredecessor(Node node) {
+        this.graph.removeSuccessor(node, this);
+        this.predecessors.remove(node);
+    }
+
+    public void removeAllPreds() {
+        for (Node pred : this.predecessors) {
+            this.graph.removeSuccessor(pred, this);
+        }
+        this.predecessors.clear();
+    }
 }

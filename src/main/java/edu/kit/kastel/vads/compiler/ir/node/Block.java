@@ -1,10 +1,13 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.SequencedSet;
 import org.jspecify.annotations.Nullable;
 
 public final class Block extends Node {
@@ -40,6 +43,27 @@ public final class Block extends Node {
     public int phiIndex(Phi phi) {
         return this.phis.get(phi);
     }
+
+    public void removeSuccessor(Node node, IrGraph irGraph) {
+        List<Map.Entry<Node, Node>> edges = new ArrayList<>();
+
+        for (Map.Entry<Node, SequencedSet<Node>> entry : irGraph.allSuccessors().entrySet()) {
+            Node pred = entry.getKey();
+            for (Node succ : entry.getValue()) {
+                if (pred.block() == this &&
+                  (succ instanceof Phi || succ instanceof Block)) {
+                    edges.add(new AbstractMap.SimpleEntry<>(pred, succ));
+                }
+            }
+        }
+
+        for (Map.Entry<Node, Node> edge : edges) {
+            Node pred = edge.getKey();
+            Node succ = edge.getValue();
+            succ.removePredecessor(pred);
+        }
+    }
+
 
     public List<Node> nodesWithPhis() {
         if (blockExit == null) return List.copyOf(nodes);

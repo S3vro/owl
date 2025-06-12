@@ -33,7 +33,7 @@ public record x86CommutativeBinaryOperation(Register op1, Register op2, Register
         if (target instanceof StackRegister) {
             instructions.addAll(new x86Mov(HardwareRegister.R15D, target).generate());
         }
-    
+
         return instructions;
     }
 
@@ -41,5 +41,5 @@ public record x86CommutativeBinaryOperation(Register op1, Register op2, Register
     public final String toString() {
         return String.format("%s %s, %s%n", command, op1, op2);
     }
-    
+
 }

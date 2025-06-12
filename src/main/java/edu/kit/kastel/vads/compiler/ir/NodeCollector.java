@@ -11,7 +11,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class NodeCollector {
 
@@ -35,9 +34,7 @@ public class NodeCollector {
 
     blocks.forEach(this::toposort);
 
-    return blocks.stream()
-      .filter(block -> !block.predecessors().isEmpty() || block.equals(graph.startBlock()))
-      .collect(Collectors.toList());
+    return blocks;
   }
 
   private void checkOrdering(Block b) {
