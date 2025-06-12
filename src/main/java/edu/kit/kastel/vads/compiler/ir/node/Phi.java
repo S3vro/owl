@@ -1,43 +1,12 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public final class Phi extends Node {
-    private final List<Node> users;
     private boolean isSideEffectPhi = false;
-    private Block operationBlock;
 
     public Phi(Block block, Node... preds) {
         super(block, preds);
-        this.users = new ArrayList<>();
     }
 
-    public List<Node> users() {
-        return List.copyOf(this.users);
-    }
-
-    public void setOperationBlock(Block operationBlock) {
-        this.operationBlock = operationBlock;
-    }
-
-    public Block operationBlock() {
-        return operationBlock;
-    }
-
-    public boolean addUser(Node node) {
-        return this.users.add(node);
-    }
-
-    public void replaceBy(Node node) {
-        for (Node user : users) {
-            for (int i = 0; i < user.predecessors().size(); i++) {
-                if (user.predecessor(i).equals(this)) {
-                    user.setPredecessor(i, node);
-                }
-            }
-        }
-    }
 
     public void appendOperand(Node node) {
         addPredecessor(node);

@@ -14,6 +14,6 @@ public class ForStepAnalysis implements NoOpVisitor<Boolean> {
       }
     }
 
-    return visit(forTree, data);
+    return Unit.INSTANCE;
   }
 }

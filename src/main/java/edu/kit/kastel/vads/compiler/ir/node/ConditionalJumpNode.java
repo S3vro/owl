@@ -2,7 +2,7 @@ package edu.kit.kastel.vads.compiler.ir.node;
 
 public final class ConditionalJumpNode extends ControlFlowNode {
 
-    private final Node condition;
+    private Node condition;
     private final Block thenBlock;
     private final Block elseBlock;
 
@@ -11,6 +11,13 @@ public final class ConditionalJumpNode extends ControlFlowNode {
         this.condition = condition;
         this.thenBlock = thenBlock;
         this.elseBlock = elseBlock;
+    }
+
+
+    @Override
+    public void setPredecessor(int idx, Node node) {
+        super.setPredecessor(idx, node);
+        this.condition = node;
     }
 
     public Node getCondition() {

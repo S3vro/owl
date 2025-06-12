@@ -228,11 +228,13 @@ class GraphConstructor {
         if (otherNodes.isEmpty()) {
             return new UndefNode(currentBlock);
         } else if (otherNodes.size() == 1) {
+            // Phi has only 1 value
             Node replaceBy = otherNodes.getFirst();
             for (Node successor : graph.successors(phi)) {
                 for (int i = 0; i < successor.predecessors().size(); i++) {
                     if (successor.predecessors().get(i).equals(phi)) {
                         successor.setPredecessor(i, replaceBy);
+                        System.out.println("Removed: " + phi + " " + phi.successors());
                         if (successor instanceof Phi succPhi && sealedBlocks.contains(successor.block())) {
                             tryRemoveTrivialPhi(succPhi);
                         }
@@ -242,6 +244,8 @@ class GraphConstructor {
 
             return replaceBy;
         }
+
+        //Phi is not trivial => has two values
         return phi;
     }
 

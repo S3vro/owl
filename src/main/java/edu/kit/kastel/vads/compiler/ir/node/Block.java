@@ -65,10 +65,24 @@ public final class Block extends Node {
     }
 
 
+    public void orderPhis(List<Phi> nodes) {
+        for (int i = 0; i < nodes.size(); i++) {
+            for (int j = 0; j < nodes.size(); j++) {
+                if (nodes.get(i).predecessors().contains(nodes.get(j)) && i > j) {
+                    Phi tmp = nodes.get(j);
+                    nodes.set(j, nodes.get(i));
+                    nodes.set(i, tmp);
+                }
+            }
+        }
+    }
+
     public List<Node> nodesWithPhis() {
         if (blockExit == null) return List.copyOf(nodes);
         List<Node> result = new ArrayList<>(List.copyOf(nodes));
-        result.addAll(new ArrayList<>(this.phis.keySet()).reversed());
+        List<Phi> reversed = new ArrayList<>(this.phis.keySet()).reversed();
+        orderPhis(reversed);
+        result.addAll(reversed);
 
         return result;
     }
@@ -77,7 +91,9 @@ public final class Block extends Node {
         if (blockExit == null) return List.copyOf(nodes);
 
         List<Node> result = new ArrayList<>(List.copyOf(nodes));
-        result.addAll(new ArrayList<>(this.phis.keySet()).reversed());
+        List<Phi> reversed = new ArrayList<>(this.phis.keySet()).reversed();
+        orderPhis(reversed);
+        result.addAll(reversed);
         result.add(blockExit);
 
         return result;

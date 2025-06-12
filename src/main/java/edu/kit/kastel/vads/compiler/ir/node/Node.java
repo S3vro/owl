@@ -55,17 +55,13 @@ public sealed abstract class Node
         this.successors.add(successor);
     }
 
-    public final void setPredecessor(int idx, Node node) {
+    public void setPredecessor(int idx, Node node) {
         this.graph.removeSuccessor(this.predecessors.get(idx), this);
         this.predecessors.set(idx, node);
         this.graph.registerSuccessor(node, this);
     }
 
     public final void addPredecessor(Node node) {
-        /* Track the users of a phi for trivial phi removal*/
-        if (node instanceof Phi phi) {
-            phi.addUser(this);
-        }
         node.addSuccessor(this);
         this.predecessors.add(node);
         this.graph.registerSuccessor(node, this);

@@ -26,12 +26,12 @@ import edu.kit.kastel.vads.compiler.ir.node.BitwiseAndNode;
 import edu.kit.kastel.vads.compiler.ir.node.BitwiseOrNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.ComparisonNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
 import edu.kit.kastel.vads.compiler.ir.node.GreaterThanNode;
 import edu.kit.kastel.vads.compiler.ir.node.GreaterThanOrEqualNode;
-import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
 import edu.kit.kastel.vads.compiler.ir.node.InCodeJmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.LShiftNode;
@@ -137,8 +137,13 @@ public class CodeGenerator {
             throw new IllegalArgumentException("Register Operands are not allowed to be null +"+ p + "("+ src + " " + target + ")");
         }
 
-        return List.of(new x86Mov(src, HardwareRegister.EAX), new x86Mov(HardwareRegister.EAX
-          , target));
+        if (src instanceof StackRegister && target instanceof StackRegister) {
+            return List.of(
+              new x86Mov(src, HardwareRegister.EAX),
+              new x86Mov(HardwareRegister.EAX, target)
+            );
+        }
+        return List.of(new x86Mov(src, target));
     }
 
     private List<x86Instruction> generateIf(ConditionalJumpNode node, Map<Node, Register> registers) {
