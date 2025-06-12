@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.Stack;
 import java.util.stream.Collectors;
 
 class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableStatus, VariableStatusAnalysis.VariableStatus> {
@@ -209,7 +208,9 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
     }
 
     record Scope(Set<Name> definitions, Set<Name> declarations) {
-
+        public Scope copy() {
+            return new Scope(new HashSet<>(Set.copyOf(definitions)), new HashSet<>(Set.copyOf(declarations)));
+        }
     }
 
     static class VariableStatus {
@@ -220,28 +221,32 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
         }
 
         public VariableStatus(List<Scope> scopes) {
-            this.scopes = new ArrayList<>(List.copyOf(scopes));
+            this.scopes = scopes;
         }
 
         public VariableStatus newScope() {
-            scopes.add(new Scope(new HashSet<>(), new HashSet<>()));
+            List<Scope> copied = new ArrayList<>(List.copyOf(scopes));
+            copied.add(new Scope(new HashSet<>(), new HashSet<>()));
 
-            return new VariableStatus(scopes);
+            return new VariableStatus(copied);
         }
 
         public VariableStatus exitScopeAndPropagate() {
             if (scopes.size() <= 1) {
-                return new VariableStatus(new Stack<>());
+                return new VariableStatus(new ArrayList<>());
             }
 
             Scope current = scopes.getLast();
             scopes.removeLast();
             /*Add definitions that do not belong to the declarations here so that they can maybe declare other definitions*/
-            scopes.getLast().definitions().addAll(
+            Scope copied = scopes.getLast().copy();
+            copied.definitions().addAll(
               current.definitions().stream()
                 .filter(c -> !current.declarations().contains(c))
                 .toList()
             );
+            scopes.removeLast();
+            scopes.add(copied);
             return new VariableStatus(scopes);
         }
 
@@ -250,8 +255,12 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
                 return new VariableStatus(new ArrayList<>());
             }
 
-            scopes.removeLast();
-            return new VariableStatus(scopes);
+
+            List<Scope> copied = new ArrayList<>(List.copyOf(scopes));
+            copied.add(new Scope(new HashSet<>(), new HashSet<>()));
+
+            copied.removeLast();
+            return new VariableStatus(copied);
         }
 
         private boolean declared(Name name) {
@@ -267,17 +276,24 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
                 throw new SemanticException("Variable " + name + " was not declared in this scope, but you are trying to define it");
             }
 
-            this.scopes.getLast().definitions().add(name);
+            Scope copied = this.scopes.getLast().copy();
+            copied.definitions().add(name);
+            scopes.removeLast();
+            scopes.addLast(copied);
             return new VariableStatus(scopes);
         }
 
         public VariableStatus declare(Name name) {
-            if (defined(name)) {
-                throw new SemanticException("Variable " + name + " already defined!");
+            if (declared(name)) {
+                throw new SemanticException("Variable " + name + " already declared!");
             }
 
-            scopes.getLast().declarations().add(name);
+            Scope copied = this.scopes.getLast().copy();
+            copied.declarations().add(name);
+            scopes.removeLast();
+            scopes.addLast(copied);
             return new VariableStatus(scopes);
+
         }
 
         public void use(Name name)  {
@@ -296,22 +312,26 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
             scopes.forEach(s -> allDeclarations.addAll(s.declarations()));
             Set<Name> filtered = allDeclarations.stream().filter(name -> !defined(name)).collect(Collectors.toSet());
 
-            scopes.getLast().definitions().addAll(
-              filtered
-            );
 
+            Scope copied = this.scopes.getLast().copy();
+            copied.definitions().addAll(filtered);
+            scopes.removeLast();
+            scopes.addLast(copied);
             return new VariableStatus(scopes);
         }
 
         public VariableStatus calculateIf(VariableStatus afterThen) {
             if (this.scopes().isEmpty())
-                return new VariableStatus(new Stack<>());
+                return new VariableStatus(new ArrayList<>());
 
-            List<Name> defs = this.scopes().getLast().definitions().stream().filter(this.scopes().getLast().definitions()::contains).toList();
-            this.scopes().getLast().definitions().clear();
-            this.scopes().getLast().definitions().addAll(defs);
+            List<Name> defs = this.scopes().getLast().definitions().stream().filter(afterThen.scopes().getLast().definitions()::contains).toList();
 
-            return new VariableStatus(this.scopes());
+            Scope copied = this.scopes.getLast().copy();
+            copied.definitions().clear();
+            copied.definitions().addAll(defs);
+            scopes.removeLast();
+            scopes.addLast(copied);
+            return new VariableStatus(scopes);
         }
     }
 }
