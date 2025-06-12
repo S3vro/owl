@@ -1,8 +1,13 @@
 package edu.kit.kastel.vads.compiler.semantic;
 
+import edu.kit.kastel.vads.compiler.lexer.Operator;
+import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LogicalNegateTree;
+import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
 import edu.kit.kastel.vads.compiler.parser.ast.TernaryTree;
 import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
+import java.util.List;
 import java.util.Map;
 
 import edu.kit.kastel.vads.compiler.lexer.Operator.OperatorType;
@@ -19,6 +24,18 @@ import edu.kit.kastel.vads.compiler.parser.visitor.Unit;
 
 public class TypeChecker implements NoOpVisitor<Map<IdentName, Type>>{
 
+  private static List<OperatorType> needUsageCheck = List.of(
+    Operator.OperatorType.ASSIGN_PLUS,
+    Operator.OperatorType.ASSIGN_MINUS,
+    Operator.OperatorType.ASSIGN_MUL,
+    Operator.OperatorType.ASSIGN_DIV,
+    Operator.OperatorType.ASSIGN_MOD,
+    Operator.OperatorType.ASSIGN_AND,
+    Operator.OperatorType.ASSIGN_XOR,
+    Operator.OperatorType.ASSIGN_OR,
+    Operator.OperatorType.ASSIGN_LSHIFT,
+    Operator.OperatorType.ASSIGN_RSHIFT
+  );
 
     @Override
     public Unit visit(DeclarationTree declarationTree, Map<IdentName, Type> data) {
@@ -62,7 +79,35 @@ public class TypeChecker implements NoOpVisitor<Map<IdentName, Type>>{
       if (ternaryTree.trueBranch().getType(data) != ternaryTree.falseBranch().getType(data)) {
         throw new SemanticException("both branches of a ternary must have the same type!");
       }
+
+      if (!ternaryTree.condition().getType(data).equals(BasicType.BOOL)) {
+        throw new SemanticException("condition of ternary needs to be bool!");
+      }
     return NoOpVisitor.super.visit(ternaryTree, data);
+  }
+
+  @Override
+  public Unit visit(NegateTree literalTree, Map<IdentName, Type> data) {
+      if (!literalTree.expression().getType(data).equals(BasicType.INT)) {
+        throw new SemanticException("cannot use - on bools");
+      }
+    return NoOpVisitor.super.visit(literalTree, data);
+  }
+
+  @Override
+  public Unit visit(BitwiseNegateTree literalTree, Map<IdentName, Type> data) {
+    if (!literalTree.expression().getType(data).equals(BasicType.INT)) {
+      throw new SemanticException("cannot use ~ on bools");
+    }
+    return NoOpVisitor.super.visit(literalTree, data);
+  }
+
+  @Override
+  public Unit visit(LogicalNegateTree literalTree, Map<IdentName, Type> data) {
+    if (!literalTree.expression().getType(data).equals(BasicType.BOOL)) {
+      throw new SemanticException("cannot use ! on ints");
+    }
+    return NoOpVisitor.super.visit(literalTree, data);
   }
 
   @Override
@@ -96,6 +141,13 @@ public class TypeChecker implements NoOpVisitor<Map<IdentName, Type>>{
     public Unit visit(AssignmentTree assignmentTree, Map<IdentName, Type> data) {
         if (assignmentTree.lValue() instanceof LValueIdentTree idTree) {
             boolean valid = assignmentTree.expression().getType(data).equals(data.get(idTree.name().name()));
+
+            if (needUsageCheck.contains(assignmentTree.operator().type())) {
+              valid = valid && fromOperatorType(assignmentTree.operator().type()).lhs().equals(data.get(idTree.name().name()));
+               valid = valid && fromOperatorType(assignmentTree.operator().type()).rhs().equals(assignmentTree.expression().getType(data));
+              valid = valid && fromOperatorType(assignmentTree.operator().type()).res().equals(data.get(idTree.name().name()));
+            }
+
             if (valid)
                 return NoOpVisitor.super.visit(assignmentTree, data);
         }
@@ -114,7 +166,17 @@ public class TypeChecker implements NoOpVisitor<Map<IdentName, Type>>{
                      LSHIFT,
                      BITWISE_AND,
                      BITWISE_OR,
-                     BITWISE_XOR -> new BinaryOperatorType(BasicType.INT, BasicType.INT, BasicType.INT);
+                     BITWISE_XOR,
+                     ASSIGN_PLUS,
+                     ASSIGN_MINUS,
+                     ASSIGN_MUL,
+                     ASSIGN_DIV,
+                     ASSIGN_MOD,
+                     ASSIGN_AND,
+                     ASSIGN_XOR,
+                     ASSIGN_OR,
+                     ASSIGN_LSHIFT,
+                     ASSIGN_RSHIFT -> new BinaryOperatorType(BasicType.INT, BasicType.INT, BasicType.INT);
                 case LOGICAL_GT,
                      LOGICAL_GT_OR_EQUAL,
                      LOGICAL_LT,
@@ -126,6 +188,7 @@ public class TypeChecker implements NoOpVisitor<Map<IdentName, Type>>{
                 case LOGICAL_EQUAL,
                      LOGICAL_UNEQUAL
                      -> new BinaryOperatorType(BasicType.BOOL, BasicType.BOOL, BasicType.BOOL);
+
                 default -> throw new IllegalArgumentException(type + " is not a binary operator");
             };
     }

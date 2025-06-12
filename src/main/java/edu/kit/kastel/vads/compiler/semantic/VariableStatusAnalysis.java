@@ -236,18 +236,20 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
                 return new VariableStatus(new ArrayList<>());
             }
 
-            Scope current = scopes.getLast();
-            scopes.removeLast();
+            List<Scope> copiedScopes = new ArrayList<>(scopes);
+
+            Scope current = copiedScopes.getLast();
+            copiedScopes.removeLast();
             /*Add definitions that do not belong to the declarations here so that they can maybe declare other definitions*/
-            Scope copied = scopes.getLast().copy();
+            Scope copied = copiedScopes.getLast().copy();
             copied.definitions().addAll(
               current.definitions().stream()
                 .filter(c -> !current.declarations().contains(c))
                 .toList()
             );
-            scopes.removeLast();
-            scopes.add(copied);
-            return new VariableStatus(scopes);
+            copiedScopes.removeLast();
+            copiedScopes.add(copied);
+            return new VariableStatus(copiedScopes);
         }
 
         public VariableStatus exitScope() {
@@ -257,9 +259,8 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
 
 
             List<Scope> copied = new ArrayList<>(List.copyOf(scopes));
-            copied.add(new Scope(new HashSet<>(), new HashSet<>()));
-
             copied.removeLast();
+
             return new VariableStatus(copied);
         }
 
@@ -321,17 +322,20 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
         }
 
         public VariableStatus calculateIf(VariableStatus afterThen) {
-            if (this.scopes().isEmpty())
-                return new VariableStatus(new ArrayList<>());
+            Scope scopeA = this.scopes.isEmpty() ? new Scope(new HashSet<>(), new HashSet<>()) : this.scopes.getLast().copy();
+            Scope scopeB = afterThen.scopes().isEmpty() ? new Scope(new HashSet<>(), new HashSet<>()) : afterThen.scopes().getLast().copy();
 
-            List<Name> defs = this.scopes().getLast().definitions().stream().filter(afterThen.scopes().getLast().definitions()::contains).toList();
+            List<Name> defs = scopeA.definitions().stream().filter(scopeB.definitions()::contains).toList();
 
-            Scope copied = this.scopes.getLast().copy();
-            copied.definitions().clear();
-            copied.definitions().addAll(defs);
-            scopes.removeLast();
-            scopes.addLast(copied);
-            return new VariableStatus(scopes);
+            scopeA.definitions().clear();
+            scopeA.definitions().addAll(defs);
+
+            List<Scope> copiedScopes = new ArrayList<>(this.scopes);
+            if (!this.scopes.isEmpty())
+                copiedScopes.removeLast();
+            copiedScopes.add(scopeA);
+
+            return new VariableStatus(copiedScopes);
         }
     }
 }
