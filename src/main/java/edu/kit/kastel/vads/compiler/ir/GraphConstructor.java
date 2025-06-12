@@ -213,18 +213,20 @@ class GraphConstructor {
 
     Node addPhiOperands(Name variable, Phi phi) {
         for (Node pred : phi.block().predecessors()) {
-            phi.appendOperand(readVariable(variable, pred.block()));
+            Node operand = readVariable(variable, pred.block());
+            if (!(operand instanceof UndefNode)) {
+                phi.appendOperand(operand);
+            }
         }
         return tryRemoveTrivialPhi(phi);
     }
 
     Node tryRemoveTrivialPhi(Phi phi) {
-        /*
         List<? extends Node> otherNodes = new ArrayList<>(phi.predecessors());
         otherNodes.remove(phi);
 
         if (otherNodes.isEmpty()) {
-            return newUndef(otherNodes);
+            return new UndefNode(currentBlock);
         } else if (otherNodes.size() == 1) {
             Node replaceBy = otherNodes.getFirst();
             for (Node successor : graph.successors(phi)) {
@@ -240,7 +242,6 @@ class GraphConstructor {
 
             return replaceBy;
         }
-         */
         return phi;
     }
 
@@ -296,7 +297,10 @@ class GraphConstructor {
 
     Node addPhiOperands(Phi phi) {
         for (Node pred : phi.block().predecessors()) {
-            phi.appendOperand(readSideEffect(pred.block()));
+            Node operand = readSideEffect(pred.block());
+            if (!(operand instanceof UndefNode)) {
+                phi.appendOperand(operand);
+            }
         }
         return tryRemoveTrivialPhi(phi);
     }

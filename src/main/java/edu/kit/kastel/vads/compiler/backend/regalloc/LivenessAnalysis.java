@@ -11,6 +11,7 @@ import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.Phi;
 import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
+import edu.kit.kastel.vads.compiler.ir.node.UndefNode;
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -114,6 +115,7 @@ public class LivenessAnalysis {
             );
             case ReturnNode _ -> Set.of();
             case InCodeJmpNode jmpNode -> Set.of(new LivenessKey(jmpNode.target(), jmpNode.target().nodesWithExitAndPhi().get(0)));
+            case UndefNode _ -> Set.of();
             default -> throw new UnsupportedOperationException(node + " is not handled");
         };
     }
@@ -157,6 +159,7 @@ public class LivenessAnalysis {
             case ConstIntNode c-> Set.of(c);
             case ConstBoolNode c-> Set.of(c);
             case Phi p -> Set.of(p);
+            case UndefNode u -> Set.of(u);
             default -> Set.of();
         };
     }

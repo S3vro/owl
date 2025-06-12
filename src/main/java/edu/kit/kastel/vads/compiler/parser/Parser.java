@@ -138,8 +138,7 @@ public class Parser {
         this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
         ExpressionTree condition = this.parseExpression();
         this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
-        //TODO: Changeback
-        if (!tokenSource.peek().isSeparator(SeparatorType.SEMICOLON)) {
+        if (!tokenSource.peek().isSeparator(SeparatorType.PAREN_CLOSE)) {
             if (this.tokenSource.peek().isType()) {
                 statement = Optional.of(parseDeclaration());
             } else {
