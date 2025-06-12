@@ -8,10 +8,14 @@ import edu.kit.kastel.vads.compiler.lexer.Operator;
 import edu.kit.kastel.vads.compiler.lexer.Operator.OperatorType;
 import edu.kit.kastel.vads.compiler.lexer.Separator;
 import edu.kit.kastel.vads.compiler.lexer.Separator.SeparatorType;
+import edu.kit.kastel.vads.compiler.parser.type.BasicType;
 import edu.kit.kastel.vads.compiler.lexer.Token;
 
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TokenSource {
@@ -41,6 +45,21 @@ public class TokenSource {
         }
         this.idx++;
         return kw;
+    }
+
+
+    public Keyword expectType() {
+        Token token = peek();
+        Map<KeywordType, BasicType> mapped = EnumSet.allOf(BasicType.class).stream()
+                                                    .collect(Collectors
+                                                            .toMap(e -> e.getKeywordType(), e -> e));
+
+        if (!(token instanceof Keyword t) || !mapped.keySet().contains(t.type())) {
+            throw new ParseException("expected type " + " but got " + token);
+        }
+        this.idx++;
+
+        return t;
     }
 
     public Separator expectSeparator(SeparatorType type) {

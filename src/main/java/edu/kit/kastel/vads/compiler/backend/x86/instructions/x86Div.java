@@ -1,28 +1,34 @@
 package edu.kit.kastel.vads.compiler.backend.x86.instructions;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.backend.x86.HardwareRegister;
-import edu.kit.kastel.vads.compiler.backend.x86.StackRegister;
 
 public record x86Div(Register op1, Register op2, Register target, boolean useRemainder) implements x86Instruction {
     @Override
-    public void appendInstruction(StringBuilder builder) {
-        Register localOp1 = op1;
+    public List<x86Instruction> generate() {
+        List<x86Instruction> instructions = new ArrayList<x86Instruction>();
 
-        if (localOp1 instanceof StackRegister) {
-            new x86Mov(localOp1, HardwareRegister.R15D).appendInstruction(builder);
-            localOp1 = HardwareRegister.R15D;
-        }
+        Register localOp1 = opOrFromStack(op1, HardwareRegister.R15D, instructions);
 
-        new x86Mov(op2, HardwareRegister.EAX).appendInstruction(builder);
+        instructions.add(new x86Mov(op2, HardwareRegister.EAX));
 
         //Sign extend into EDX
-        builder.append("cdq").append('\n');
+        instructions.add(new x86CDQ());
 
-        builder.append("idiv ").append(localOp1).append('\n');
+        instructions.add(new x86Div(localOp1, localOp1, localOp1, useRemainder));
 
         HardwareRegister resultRegister = useRemainder ? HardwareRegister.EDX : HardwareRegister.EAX;
 
-        new x86Mov(resultRegister, target).appendInstruction(builder);
+        instructions.add(new x86Mov(resultRegister, target));
+
+        return instructions;
+    }
+
+    @Override
+    public final String toString() {
+        return String.format("idiv %s%n", op1);
     }
 }

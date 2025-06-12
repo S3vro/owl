@@ -36,12 +36,57 @@ public class Lexer {
             case '{' -> separator(SeparatorType.BRACE_OPEN);
             case '}' -> separator(SeparatorType.BRACE_CLOSE);
             case ';' -> separator(SeparatorType.SEMICOLON);
+            case '?' -> new Operator(OperatorType.TERNARY_QUESTION, buildSpan(1));
+            case ':' -> new Operator(OperatorType.TERNARY_COLON, buildSpan(1));
+            case '~' -> new Operator(OperatorType.BITWISE_NOT, buildSpan(1));
             case '-' -> singleOrAssign(OperatorType.MINUS, OperatorType.ASSIGN_MINUS);
             case '+' -> singleOrAssign(OperatorType.PLUS, OperatorType.ASSIGN_PLUS);
             case '*' -> singleOrAssign(OperatorType.MUL, OperatorType.ASSIGN_MUL);
             case '/' -> singleOrAssign(OperatorType.DIV, OperatorType.ASSIGN_DIV);
             case '%' -> singleOrAssign(OperatorType.MOD, OperatorType.ASSIGN_MOD);
-            case '=' -> new Operator(OperatorType.ASSIGN, buildSpan(1));
+            case '^' -> singleOrAssign(OperatorType.BITWISE_XOR, OperatorType.ASSIGN_XOR);
+            case '&' -> singleOrDoubleOrAssign('&', OperatorType.BITWISE_AND, OperatorType.LOGICAL_AND, OperatorType.ASSIGN_AND);
+            case '|' -> singleOrDoubleOrAssign('|', OperatorType.BITWISE_OR, OperatorType.LOGICAL_OR, OperatorType.ASSIGN_OR);
+            case '!' ->  {
+                if (hasMore(1) && peek(1) == '=') {
+                    yield new Operator(OperatorType.LOGICAL_UNEQUAL, buildSpan(2));
+                }
+                yield new Operator(OperatorType.LOGICAL_NOT, buildSpan(1));
+            }
+            case '<' -> {
+                if (hasMore(1)) {
+                    if (peek(1) == '<') {
+                        if (hasMore(2) && peek(2) == '=') {
+                            yield new Operator(OperatorType.ASSIGN_LSHIFT, buildSpan(3));
+                        }
+                        yield new Operator(OperatorType.LSHIFT, buildSpan(2));
+                    }
+                    if (peek(1) == '=') {
+                        yield new Operator(OperatorType.LOGICAL_LT_OR_EQUAL, buildSpan(2));
+                    }
+                }
+                yield new Operator(OperatorType.LOGICAL_LT, buildSpan(1));
+            }
+            case '>' -> {
+                if (hasMore(1)) {
+                    if (peek(1) == '>') {
+                        if (hasMore(2) && peek(2) == '=') {
+                            yield new Operator(OperatorType.ASSIGN_RSHIFT, buildSpan(3));
+                        }
+                        yield new Operator(OperatorType.RSHIFT, buildSpan(2));
+                    }
+                    if (peek(1) == '=') {
+                        yield new Operator(OperatorType.LOGICAL_GT_OR_EQUAL, buildSpan(2));
+                    }
+                }
+                yield new Operator(OperatorType.LOGICAL_GT, buildSpan(1));
+            }
+            case '=' -> {
+                if (hasMore(1) && peek(1) == '=') {
+                    yield new Operator(OperatorType.LOGICAL_EQUAL, buildSpan(2));
+                }
+                yield new Operator(OperatorType.ASSIGN, buildSpan(1));
+            }
             default -> {
                 if (isIdentifierChar(peek())) {
                     if (isNumeric(peek())) {
@@ -186,6 +231,18 @@ public class Lexer {
 
     private boolean isHex(char c) {
         return isNumeric(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+    }
+
+    private Token singleOrDoubleOrAssign(char op, OperatorType single, OperatorType double_t, OperatorType assign) {
+        if (hasMore(1) && peek(1) == '=') {
+            return new Operator(assign, buildSpan(2));
+        }
+
+        if (hasMore(1) && peek(1) == op) {
+            return new Operator(double_t, buildSpan(2));
+        }
+
+        return new Operator(single, buildSpan(1));
     }
 
     private Token singleOrAssign(OperatorType single, OperatorType assign) {

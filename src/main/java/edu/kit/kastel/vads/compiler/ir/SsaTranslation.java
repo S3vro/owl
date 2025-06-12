@@ -4,13 +4,39 @@ import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.DivNode;
 import edu.kit.kastel.vads.compiler.ir.node.ModNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
+import edu.kit.kastel.vads.compiler.ir.node.Phi;
+import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
+import edu.kit.kastel.vads.compiler.ir.optimize.RemoveDeadBlocks;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfo;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfoHelper;
-import edu.kit.kastel.vads.compiler.parser.ast.*;
+import edu.kit.kastel.vads.compiler.lexer.Operator;
+import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
+import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
+import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LogicalNegateTree;
+import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
+import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
+import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
+import edu.kit.kastel.vads.compiler.parser.ast.TernaryTree;
+import edu.kit.kastel.vads.compiler.parser.ast.Tree;
+import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -36,6 +62,7 @@ public class SsaTranslation {
     public IrGraph translate() {
         var visitor = new SsaTranslationVisitor();
         this.function.accept(visitor, this);
+        new RemoveDeadBlocks().remove(this.constructor.graph());
         return this.constructor.graph();
     }
 
@@ -74,6 +101,11 @@ public class SsaTranslation {
                 case ASSIGN_MINUS -> data.constructor::newSub;
                 case ASSIGN_PLUS -> data.constructor::newAdd;
                 case ASSIGN_MUL -> data.constructor::newMul;
+                case ASSIGN_XOR -> data.constructor::newXor;
+                case ASSIGN_AND -> data.constructor::newBitWiseAnd;
+                case ASSIGN_OR -> data.constructor::newBitwiseOr;
+                case ASSIGN_LSHIFT ->  data.constructor::newLShiftNode;
+                case ASSIGN_RSHIFT ->  data.constructor::newRShiftNode;
                 case ASSIGN_DIV -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case ASSIGN_MOD -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
                 case ASSIGN -> null;
@@ -94,8 +126,47 @@ public class SsaTranslation {
             return NOT_AN_EXPRESSION;
         }
 
+        private Optional<Node> calculate_stepwise( BinaryOperationTree tree, SsaTranslation data) {
+            pushSpan(tree);
+            Node lhs = tree.lhs().accept(this, data).orElseThrow();
+
+            Block nextStepBlock = new Block(data.constructor.graph(), "stepwise_calculation_next_" + Math.abs(tree.hashCode()));
+            Block afterCalculation = new Block(data.constructor.graph(), "stepwise_calculation_after_" + Math.abs(tree.hashCode()));
+
+            boolean isLogicalAnd = tree.operatorType() == Operator.OperatorType.LOGICAL_AND;
+            Block caseTrue = isLogicalAnd ? nextStepBlock : afterCalculation;
+            Block caseFalse = isLogicalAnd ? afterCalculation : nextStepBlock;
+
+            Node conditionalNode = data.constructor.newIfNode(lhs, caseTrue, caseFalse);
+            Node trueProj = data.constructor.newControlFlowProj(conditionalNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(conditionalNode, ProjNode.SimpleProjectionInfo.CF_0);
+            nextStepBlock.addPredecessor(isLogicalAnd ? trueProj : falseProj);
+            data.constructor.sealBlock(nextStepBlock);
+            afterCalculation.addPredecessor(isLogicalAnd ? falseProj : trueProj);
+
+            data.constructor.switchBlock(nextStepBlock);
+            Node rhs = tree.rhs().accept(this, data).orElseThrow();
+            Node exitJmp = data.constructor.newJmp(afterCalculation);
+            afterCalculation.addPredecessor(exitJmp);
+            data.constructor.sealBlock(afterCalculation);
+
+            data.constructor.switchBlock(afterCalculation);
+            Phi phi = data.constructor.newPhi();
+            phi.appendOperand(lhs);
+            phi.appendOperand(rhs);
+
+            popSpan();
+
+            return Optional.of(data.constructor.tryRemoveTrivialPhi(phi));
+        }
+
         @Override
         public Optional<Node> visit(BinaryOperationTree binaryOperationTree, SsaTranslation data) {
+
+            if (binaryOperationTree.operatorType() == Operator.OperatorType.LOGICAL_AND || binaryOperationTree.operatorType() == Operator.OperatorType.LOGICAL_OR) {
+                return calculate_stepwise(binaryOperationTree, data);
+            }
+
             pushSpan(binaryOperationTree);
             Node lhs = binaryOperationTree.lhs().accept(this, data).orElseThrow();
             Node rhs = binaryOperationTree.rhs().accept(this, data).orElseThrow();
@@ -103,6 +174,19 @@ public class SsaTranslation {
                 case MINUS -> data.constructor.newSub(lhs, rhs);
                 case PLUS -> data.constructor.newAdd(lhs, rhs);
                 case MUL -> data.constructor.newMul(lhs, rhs);
+                case BITWISE_XOR -> data.constructor.newXor(lhs, rhs);
+                case BITWISE_AND -> data.constructor.newBitWiseAnd(lhs, rhs);
+                case LOGICAL_AND -> data.constructor.newLogicalAnd(lhs, rhs);
+                case LOGICAL_EQUAL -> data.constructor.newLogicalEqual(lhs, rhs);
+                case LOGICAL_UNEQUAL -> data.constructor.newLogicalUnequal(lhs, rhs);
+                case LOGICAL_OR -> data.constructor.newLogicalOr(lhs, rhs);
+                case BITWISE_OR -> data.constructor.newBitwiseOr(lhs, rhs);
+                case LOGICAL_LT -> data.constructor.newLessThanNode(lhs, rhs);
+                case LOGICAL_LT_OR_EQUAL -> data.constructor.newLessThanOrEqualNode(lhs, rhs);
+                case LSHIFT -> data.constructor.newLShiftNode(lhs, rhs);
+                case LOGICAL_GT -> data.constructor.newGreaterThanNode(lhs, rhs);
+                case LOGICAL_GT_OR_EQUAL -> data.constructor.newGreaterThanOrEqualNode(lhs, rhs);
+                case RSHIFT -> data.constructor.newRShiftNode(lhs, rhs);
                 case DIV -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case MOD -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
                 default ->
@@ -156,9 +240,17 @@ public class SsaTranslation {
         }
 
         @Override
-        public Optional<Node> visit(LiteralTree literalTree, SsaTranslation data) {
+        public Optional<Node> visit(IntLiteralTree literalTree, SsaTranslation data) {
             pushSpan(literalTree);
             Node node = data.constructor.newConstInt((int) literalTree.parseValue().orElseThrow());
+            popSpan();
+            return Optional.of(node);
+        }
+
+        @Override
+        public Optional<Node> visit(BoolLiteralTree literalTree, SsaTranslation data) {
+            pushSpan(literalTree);
+            Node node = data.constructor.newConstBool(literalTree.value());
             popSpan();
             return Optional.of(node);
         }
@@ -212,7 +304,229 @@ public class SsaTranslation {
             data.constructor.writeCurrentSideEffect(projSideEffect);
             return data.constructor.newResultProj(divMod);
         }
+
+        @Override
+        public Optional<Node> visit(LogicalNegateTree negateTree, SsaTranslation data) {
+            pushSpan(negateTree);
+            Node node = negateTree.expression().accept(this, data).orElseThrow();
+            Node res = data.constructor.newXor(data.constructor.newConstInt(1), node);
+            popSpan();
+            return Optional.of(res);
+        }
+
+        @Override
+        public Optional<Node> visit(IfTree ifTree, SsaTranslation data) {
+            pushSpan(ifTree);
+            Block thenBlock = new Block(data.constructor.graph(), "if_true_" + Math.abs(ifTree.hashCode()));
+            Block elseBlock = new Block(data.constructor.graph(), "if_false_"+ Math.abs(ifTree.hashCode()));
+            Block afterIf = new Block(data.constructor.graph(), "after_if_" +  Math.abs(ifTree.hashCode()));
+
+            Node exp = ifTree.e().accept(this, data).orElseThrow();
+            Node ifNode = data.constructor.newIfNode(exp, thenBlock, ifTree.orElse().isPresent() ? elseBlock : afterIf);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+
+            Node trueProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_0);
+
+
+            thenBlock.addPredecessor(trueProj);
+            data.constructor.switchBlock(thenBlock);
+            data.constructor.sealBlock(thenBlock);
+            ifTree.then().accept(this, data);
+            Node jmpNode = data.constructor.newJmp(afterIf);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+
+            if (ifTree.orElse().isPresent()) {
+                elseBlock.addPredecessor(falseProj);
+                data.constructor.switchBlock(elseBlock);
+                data.constructor.sealBlock(elseBlock);
+                ifTree.orElse().get().accept(this, data);
+                Node elseJmp = data.constructor.newJmp(afterIf);
+                afterIf.addPredecessor(elseJmp);
+                data.constructor.sealBlock(data.constructor.currentBlock());
+            } else {
+                afterIf.addPredecessor(falseProj);
+            }
+
+            afterIf.addPredecessor(jmpNode);
+            data.constructor.switchBlock(afterIf);
+            data.constructor.sealBlock(afterIf);
+
+            popSpan();
+
+            return NOT_AN_EXPRESSION;
+        }
+
+        @Override
+        public Optional<Node> visit(WhileTree whileTree, SsaTranslation data) {
+            pushSpan(whileTree);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+
+            Block loopCondition = new Block(data.constructor.graph(), "while_" + Math.abs(whileTree.hashCode()));
+            Block loopBody = new Block(data.constructor.graph(), "while_body_" + Math.abs(whileTree.hashCode()));
+            Block loopAfter = new Block(data.constructor.graph(), "while_after_" + Math.abs(whileTree.hashCode()));
+
+            //Generate Condition
+            Node jmpCondition = data.constructor.newJmp(loopCondition);
+            loopCondition.addPredecessor(jmpCondition);
+            data.constructor.switchBlock(loopCondition);
+            data.constructor.pushLoopStart(loopCondition);
+            Node condition = whileTree.condition().accept(this, data).orElseThrow();
+            Node ifNode = data.constructor.newIfNode(condition, loopBody, loopAfter);
+            //Generate true and false paths
+            Node trueProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_0);
+
+            //Loop After Block
+            loopAfter.addPredecessor(falseProj);
+            data.constructor.pushLoopEnd(loopAfter);
+
+            //Body Block
+            loopBody.addPredecessor(trueProj);
+            data.constructor.sealBlock(loopBody);
+            data.constructor.switchBlock(loopBody);
+            whileTree.body().accept(this, data);
+            Node jmp = data.constructor.newJmp(loopCondition);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+            loopCondition.addPredecessor(jmp);
+
+
+            data.constructor.popLoopStart();
+            data.constructor.sealBlock(loopCondition);
+            data.constructor.popLoopEnd();
+            data.constructor.sealBlock(loopAfter);
+
+
+            data.constructor.switchBlock(loopAfter);
+            popSpan();
+            return NOT_AN_EXPRESSION;
+        }
+
+        @Override
+        public Optional<Node> visit(TernaryTree ternaryTree, SsaTranslation data) {
+            Node condition = ternaryTree.condition().accept(this, data).orElseThrow();
+
+            Block ternaryTrue = new Block(data.constructor.graph(), "ternary_true_" + Math.abs(ternaryTree.hashCode()));
+            Block ternaryFalse = new Block(data.constructor.graph(), "ternary_false_" + Math.abs(ternaryTree.hashCode()));
+            Block followBlock = new Block(data.constructor.graph(), "ternary_follow_" + Math.abs(ternaryTree.hashCode()));
+
+            Node conditionalNode = data.constructor.newIfNode(condition, ternaryTrue, ternaryFalse);
+            Node trueProj = data.constructor.newControlFlowProj(conditionalNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(conditionalNode, ProjNode.SimpleProjectionInfo.CF_0);
+            ternaryTrue.addPredecessor(trueProj);
+            ternaryFalse.addPredecessor(falseProj);
+            data.constructor.sealBlock(ternaryTrue);
+            data.constructor.sealBlock(ternaryFalse);
+
+            data.constructor.switchBlock(ternaryTrue);
+            Node trueNode = ternaryTree.trueBranch().accept(this, data).orElseThrow();
+            Node trueBlockExit = data.constructor.newJmp(followBlock);
+            data.constructor.switchBlock(ternaryFalse);
+            Node falseNode = ternaryTree.falseBranch().accept(this, data).orElseThrow();
+            Node falseBlockExit = data.constructor.newJmp(followBlock);
+
+            data.constructor.switchBlock(followBlock);
+            followBlock.addPredecessor(trueBlockExit);
+            followBlock.addPredecessor(falseBlockExit);
+            data.constructor.sealBlock(followBlock);
+
+            Phi phi = data.constructor.newPhi();
+            phi.addPredecessor(trueNode);
+            phi.addPredecessor(falseNode);
+
+            return Optional.of(data.constructor.tryRemoveTrivialPhi(phi));
+        }
+
+        @Override
+        public Optional<Node> visit(ForTree forTree, SsaTranslation data) {
+            pushSpan(forTree);
+            if (forTree.definition().isPresent()) {
+                forTree.definition().get().accept(this, data);
+            }
+            data.constructor.sealBlock(data.constructor.currentBlock());
+
+            Block loopCondition = new Block(data.constructor.graph(), "for_" + Math.abs(forTree.hashCode()));
+            Block step = new Block(data.constructor.graph(), "for_step" + Math.abs(forTree.hashCode()));
+            Block loopBody = new Block(data.constructor.graph(), "for_body_" + Math.abs(forTree.hashCode()));
+            Block loopAfter = new Block(data.constructor.graph(), "for_after_" + Math.abs(forTree.hashCode()));
+            data.constructor.pushLoopEnd(loopAfter);
+            data.constructor.pushLoopStart(step);
+
+            //Jump Into
+            Node entry = data.constructor.newJmp(loopCondition);
+            loopCondition.addPredecessor(entry);
+
+            //Generate Condition
+            data.constructor.switchBlock(loopCondition);
+            Node condition = forTree.condition().accept(this, data).orElseThrow();
+            Node ifNode = data.constructor.newIfNode(condition, loopBody, loopAfter);
+            //Generate true and false paths
+            Node trueProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_1);
+            Node falseProj = data.constructor.newControlFlowProj(ifNode, ProjNode.SimpleProjectionInfo.CF_0);
+
+            //Loop After Block
+            loopAfter.addPredecessor(falseProj);
+
+            //Body Block
+            loopBody.addPredecessor(trueProj);
+
+            data.constructor.switchBlock(step);
+            if (forTree.statement().isPresent()) {
+                forTree.statement().get().accept(this, data);
+            }
+            Node backToLoop = data.constructor.newJmp(loopCondition);
+            loopCondition.addPredecessor(backToLoop);
+
+            data.constructor.switchBlock(loopBody);
+            forTree.body().accept(this, data);
+            step.addPredecessor(data.constructor.newJmp(step));
+
+
+            data.constructor.sealBlock(loopCondition);
+            data.constructor.sealBlock(step);
+            data.constructor.sealBlock(loopBody);
+            data.constructor.sealBlock(loopAfter);
+
+            data.constructor.popLoopEnd();
+            data.constructor.popLoopStart();
+
+            data.constructor.switchBlock(loopAfter);
+            popSpan();
+            return NOT_AN_EXPRESSION;
+        }
+
+        @Override
+        public Optional<Node> visit(BitwiseNegateTree negateTree, SsaTranslation data) {
+            pushSpan(negateTree);
+            Node node = negateTree.expression().accept(this, data).orElseThrow();
+            Node res = data.constructor.newXor(data.constructor.newConstInt(-1), node);
+            popSpan();
+            return Optional.of(res);
+
+        }
+
+        @Override
+        public Optional<Node> visit(ContinueTree continueTree, SsaTranslation data) {
+            pushSpan(continueTree);
+            Node jmpNode = data.constructor.newJmp(data.constructor.getLoopStart());
+            data.constructor.getLoopStart().addPredecessor(jmpNode);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+            Block newBlock = new Block(data.constructor.graph(), "after_continue_" + Math.abs(continueTree.hashCode()));
+            data.constructor.switchBlock(newBlock);
+            popSpan();
+            return NOT_AN_EXPRESSION;
+        }
+
+        @Override
+        public Optional<Node> visit(BreakTree breakTree, SsaTranslation data) {
+            pushSpan(breakTree);
+            Node jmpNode = data.constructor.newJmp(data.constructor.getLoopEnd());
+            data.constructor.getLoopEnd().addPredecessor(jmpNode);
+            data.constructor.sealBlock(data.constructor.currentBlock());
+            Block newBlock = new Block(data.constructor.graph(), "after_break_" + Math.abs(breakTree.hashCode()));
+            data.constructor.switchBlock(newBlock);
+            popSpan();
+            return NOT_AN_EXPRESSION;
+        }
     }
-
-
 }

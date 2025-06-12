@@ -8,11 +8,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /// The base class for all nodes.
-public sealed abstract class Node permits BinaryOperationNode, Block, ConstIntNode, Phi, ProjNode, ReturnNode, StartNode {
+public sealed abstract class Node
+  permits BinaryOperationNode, Block, ConstBoolNode, ConstIntNode, ControlFlowNode, InCodeJmpNode, Phi, ProjNode, StartNode,
+  UndefNode {
     private final IrGraph graph;
     private final Block block;
     private final List<Node> predecessors = new ArrayList<>();
     private final DebugInfo debugInfo;
+    private final List<Node> successors = new ArrayList<>();
 
     protected Node(Block block, Node... predecessors) {
         this.graph = block.graph();
@@ -20,6 +23,7 @@ public sealed abstract class Node permits BinaryOperationNode, Block, ConstIntNo
         this.predecessors.addAll(List.of(predecessors));
         for (Node predecessor : predecessors) {
             graph.registerSuccessor(predecessor, this);
+            predecessor.addSuccessor(this);
         }
         this.debugInfo = DebugInfoHelper.getDebugInfo();
     }
@@ -43,13 +47,22 @@ public sealed abstract class Node permits BinaryOperationNode, Block, ConstIntNo
         return List.copyOf(this.predecessors);
     }
 
-    public final void setPredecessor(int idx, Node node) {
+    public final List<? extends Node> successors() {
+        return List.copyOf(this.successors);
+    }
+
+    public final void addSuccessor(Node successor) {
+        this.successors.add(successor);
+    }
+
+    public void setPredecessor(int idx, Node node) {
         this.graph.removeSuccessor(this.predecessors.get(idx), this);
         this.predecessors.set(idx, node);
         this.graph.registerSuccessor(node, this);
     }
 
     public final void addPredecessor(Node node) {
+        node.addSuccessor(this);
         this.predecessors.add(node);
         this.graph.registerSuccessor(node, this);
     }
@@ -73,5 +86,17 @@ public sealed abstract class Node permits BinaryOperationNode, Block, ConstIntNo
 
     protected static int predecessorHash(Node node, int predecessor) {
         return System.identityHashCode(node.predecessor(predecessor));
+    }
+
+    public void removePredecessor(Node node) {
+        this.graph.removeSuccessor(node, this);
+        this.predecessors.remove(node);
+    }
+
+    public void removeAllPreds() {
+        for (Node pred : this.predecessors) {
+            this.graph.removeSuccessor(pred, this);
+        }
+        this.predecessors.clear();
     }
 }

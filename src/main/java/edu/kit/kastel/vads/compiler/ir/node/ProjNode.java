@@ -23,6 +23,6 @@ public final class ProjNode extends Node {
     }
 
     public enum SimpleProjectionInfo implements ProjectionInfo {
-        RESULT, SIDE_EFFECT
+        RESULT, SIDE_EFFECT, CF_0, CF_1;
     }
 }

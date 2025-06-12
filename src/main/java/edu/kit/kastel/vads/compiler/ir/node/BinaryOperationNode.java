@@ -1,6 +1,8 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
-public sealed abstract class BinaryOperationNode extends Node permits AddNode, DivNode, ModNode, MulNode, SubNode {
+public sealed abstract class BinaryOperationNode extends Node
+  permits AddNode, BitwiseAndNode, BitwiseOrNode, ComparisonNode, DivNode, LShiftNode, LogicalAndNode, LogicalOrNode,
+  ModNode, MulNode, RShiftNode, SubNode, XorNode {
     public static final int LEFT = 0;
     public static final int RIGHT = 1;
 
@@ -26,6 +28,11 @@ public sealed abstract class BinaryOperationNode extends Node permits AddNode, D
         if (a.getClass() != b.getClass()) {
             return false;
         }
+
+        if (!a.block().equals(b.block())) {
+            return false;
+        }
+
         if (a.predecessor(LEFT) == b.predecessor(LEFT) && a.predecessor(RIGHT) == b.predecessor(RIGHT)) {
             return true;
         }
@@ -38,6 +45,11 @@ public sealed abstract class BinaryOperationNode extends Node permits AddNode, D
         if (!(obj instanceof BinaryOperationNode binOp)) {
             return false;
         }
+
+        if (!this.block().equals(binOp.block())) {
+            return false;
+        }
+
         return obj.getClass() == this.getClass()
             && this.predecessor(LEFT) == binOp.predecessor(LEFT)
             && this.predecessor(RIGHT) == binOp.predecessor(RIGHT);

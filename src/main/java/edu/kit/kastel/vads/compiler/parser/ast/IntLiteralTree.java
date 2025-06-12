@@ -1,13 +1,15 @@
 package edu.kit.kastel.vads.compiler.parser.ast;
 
 import edu.kit.kastel.vads.compiler.Span;
-import edu.kit.kastel.vads.compiler.parser.ParseException;
+import edu.kit.kastel.vads.compiler.parser.symbol.IdentName;
+import edu.kit.kastel.vads.compiler.parser.type.BasicType;
+import edu.kit.kastel.vads.compiler.parser.type.Type;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
-import edu.kit.kastel.vads.compiler.semantic.SemanticException;
-import java.util.Optional;
+
+import java.util.Map;
 import java.util.OptionalLong;
 
-public record LiteralTree(String value, int base, Span span) implements ExpressionTree {
+public record IntLiteralTree(String value, int base, Span span) implements ExpressionTree {
     @Override
     public <T, R> R accept(Visitor<T, R> visitor, T data) {
         return visitor.visit(this, data);
@@ -43,4 +45,8 @@ public record LiteralTree(String value, int base, Span span) implements Expressi
         }
     }
 
+    @Override
+    public Type getType(Map<IdentName, Type> gamma) {
+        return BasicType.INT;
+    }
 }

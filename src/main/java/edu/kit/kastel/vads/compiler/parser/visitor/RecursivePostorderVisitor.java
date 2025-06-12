@@ -2,18 +2,27 @@ package edu.kit.kastel.vads.compiler.parser.visitor;
 
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LogicalNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
 import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
+import edu.kit.kastel.vads.compiler.parser.ast.TernaryTree;
 import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 
 /// A visitor that traverses a tree in postorder
 /// @param <T> a type for additional data
@@ -81,7 +90,7 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
     }
 
     @Override
-    public R visit(LiteralTree literalTree, T data) {
+    public R visit(IntLiteralTree literalTree, T data) {
         return this.visitor.visit(literalTree, data);
     }
 
@@ -105,12 +114,27 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
     }
 
     @Override
+    public R visit(LogicalNegateTree negateTree, T data) {
+        R r = negateTree.expression().accept(this, data);
+        r = this.visitor.visit(negateTree, accumulate(data, r));
+        return r;
+    }
+
+    @Override
+    public R visit(BitwiseNegateTree bitwiseNegateTree, T data) {
+        R r = bitwiseNegateTree.expression().accept(this, data);
+        r = this.visitor.visit(bitwiseNegateTree, accumulate(data, r));
+
+        return r;
+    }
+
+    @Override
     public R visit(ProgramTree programTree, T data) {
         R r;
         T d = data;
         for (FunctionTree tree : programTree.topLevelTrees()) {
             r = tree.accept(this, d);
-            d = accumulate(data, r);
+            d = accumulate(d, r);
         }
         r = this.visitor.visit(programTree, d);
         return r;
@@ -130,5 +154,69 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
 
     protected T accumulate(T data, R value) {
         return data;
+    }
+
+    @Override
+    public R visit(BoolLiteralTree literalTree, T data) {
+        return this.visitor.visit(literalTree, data);
+    }
+
+    @Override
+    public R visit(IfTree ifTree, T data) {
+        R r = ifTree.e().accept(this, data);
+        r = ifTree.then().accept(this, accumulate(data, r));
+        if (ifTree.orElse().isPresent())
+            r = ifTree.orElse().get().accept(this, accumulate(data, r));
+        r = this.visitor.visit(ifTree, accumulate(data, r));
+        return r;
+    }
+
+    @Override
+    public R visit(WhileTree whileTree, T data) {
+        R r = whileTree.condition().accept(this, data);
+        r = whileTree.body().accept(this, accumulate(data, r));
+        r = this.visitor.visit(whileTree, accumulate(data, r));
+
+        return r;
+    }
+
+    @Override
+    public R visit(TernaryTree ternaryTree, T data) {
+        R r = ternaryTree.condition().accept(this, data);
+        r = ternaryTree.trueBranch().accept(this, accumulate(data, r));
+        r = ternaryTree.falseBranch().accept(this, accumulate(data, r));
+
+        r = this.visitor.visit(ternaryTree, accumulate(data, r));
+        return r;
+    }
+
+    @Override
+    public R visit(ForTree forTree, T data) {
+        R r;
+        if (forTree.definition().isPresent()) {
+            r = forTree.definition().get().accept(this, data);
+            r = forTree.condition().accept(this, accumulate(data, r));
+        } else {
+            r = forTree.condition().accept(this, data);
+        }
+
+        if (forTree.statement().isPresent()) {
+            r = forTree.statement().get().accept(this, accumulate(data, r));
+        }
+
+        r = forTree.body().accept(this, accumulate(data, r));
+
+        r = this.visitor.visit(forTree, accumulate(data, r));
+        return r;
+    }
+
+    @Override
+    public R visit(ContinueTree continueTree, T data) {
+        return this.visitor.visit(continueTree, data);
+    }
+
+    @Override
+    public R visit(BreakTree breakTree, T data) {
+        return this.visitor.visit(breakTree, data);
     }
 }

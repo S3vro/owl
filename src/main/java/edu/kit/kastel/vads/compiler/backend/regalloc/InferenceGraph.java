@@ -1,22 +1,25 @@
 package edu.kit.kastel.vads.compiler.backend.regalloc;
 
-import edu.kit.kastel.vads.compiler.ir.IrGraph;
+import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
-
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class InferenceGraph {
 
 
     private Map<InferenceGraphNode, Set<InferenceGraphNode>> adjacencyList = new HashMap<>();
 
-    public void generate(IrGraph graph){
+    public void generate(List<Block> blocks){
         LivenessAnalysis livenessAnalysis = new LivenessAnalysis();
-        Map<Node, Set<Node>> live = livenessAnalysis.getLiveAt(graph);
-        livenessAnalysis.prettyPrint(graph);
+        Map<LivenessAnalysis.LivenessKey, Set<Node>> live = livenessAnalysis.calculateLiveness(blocks);
 
-        live.keySet().forEach(node -> {
-            this.adjacencyList.put(new InferenceGraphNode(node), new HashSet<>());
+        live.keySet().forEach(key -> {
+            this.adjacencyList.put(new InferenceGraphNode(key.node()), new HashSet<>());
         });
 
         for (Set<Node> liveTogether : live.values()) {
@@ -28,12 +31,12 @@ public class InferenceGraph {
                 }
             }
         }
-        
+
         // Add Edge to live out vars in case the variable is not used
-        livenessAnalysis.getLiveOut().forEach((node, liveOut) -> {
+        livenessAnalysis.getLiveOut().forEach((key, liveOut) -> {
             for (Node out : liveOut) {
-                if (!out.equals(node)) {
-                    this.connect(new InferenceGraphNode(node), new InferenceGraphNode(out));
+                if (!out.equals(key.node())) {
+                    this.connect(new InferenceGraphNode(key.node()), new InferenceGraphNode(out));
                 }
             }
         });
@@ -96,7 +99,7 @@ public class InferenceGraph {
         private int weight;
 
         public InferenceGraphNode(Node node) {
-            this.node = node; 
+            this.node = node;
             this.weight = 0;
         }
 

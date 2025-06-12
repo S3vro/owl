@@ -4,6 +4,8 @@ package edu.kit.kastel.vads.compiler.backend.x86;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Instruction;
+import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Leave;
 import edu.kit.kastel.vads.compiler.backend.x86.instructions.x86Mov;
 
 public final class StackManager {
@@ -30,7 +32,7 @@ public final class StackManager {
 
         builder.append("push ").append(HardwareRegister.RBP).append('\n');
 
-        new x86Mov(HardwareRegister.RSP, HardwareRegister.RBP).appendInstruction(builder);
+        builder.append(new x86Mov(HardwareRegister.RSP, HardwareRegister.RBP));
 
         builder.append("sub ")
                 .append(HardwareRegister.RSP)
@@ -39,8 +41,8 @@ public final class StackManager {
                 .append("\n");
     }
 
-    public void destruct(StringBuilder builder) {
+    public void destruct(List<x86Instruction> instructions) {
         if (this.stackSize == 0) return;
-        builder.append("leave").append('\n');
+        instructions.add(new x86Leave());
     }
 }

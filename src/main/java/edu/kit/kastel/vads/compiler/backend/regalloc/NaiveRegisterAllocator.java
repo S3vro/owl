@@ -1,18 +1,16 @@
-package edu.kit.kastel.vads.compiler.backend.x86;
+package edu.kit.kastel.vads.compiler.backend.regalloc;
 
-import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
-import edu.kit.kastel.vads.compiler.backend.regalloc.RegisterAllocator;
-import edu.kit.kastel.vads.compiler.ir.IrGraph;
+import edu.kit.kastel.vads.compiler.backend.x86.HardwareRegister;
+import edu.kit.kastel.vads.compiler.backend.x86.StackManager;
+import edu.kit.kastel.vads.compiler.backend.x86.StackRegister;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
 import edu.kit.kastel.vads.compiler.ir.node.StartNode;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class NaiveRegisterAllocator implements RegisterAllocator {
 
@@ -39,31 +37,26 @@ public class NaiveRegisterAllocator implements RegisterAllocator {
         this.stackManager = stackManager;
     }
 
-    public Map<Node, Register> allocateRegisters(IrGraph graph) {
-        Set<Node> visited = new HashSet<>();
-        visited.add(graph.endBlock());
-        scan(graph.endBlock(), visited);
-        return Map.copyOf(this.registers);
-    }
+    public Map<Node, Register> allocateRegisters(List<Block> blocks) {
+        for (Block block : blocks) {
+            for (Node node : block.nodes()) {
+                if (needsRegister(node)) {
+                    if (this.id < 11) {
+                        this.registers.put(node, HARDWARE_REGS.get(this.id++));
+                    } else {
+                        // if no more registers spill
+                        int stackId = this.id++;
+                        StackRegister register = new StackRegister(stackId, 0);
+                        this.stackManager.addToStack(register);
+                        this.registers.put(node, register);
+                    }
 
-    private void scan(Node node, Set<Node> visited) {
-        for (Node predecessor : node.predecessors()) {
-            if (visited.add(predecessor)) {
-                scan(predecessor, visited);
+
+                }
             }
         }
-        if (needsRegister(node)) {
-            if (this.id < 11) {
-                this.registers.put(node, HARDWARE_REGS.get(this.id++));
-            } else {
-                // if no more registers spill
-                int stackId = this.id++;
-                StackRegister register = new StackRegister(stackId,0);
-                this.stackManager.addToStack(register);
-                this.registers.put(node, register);
-            }
 
-        }
+        return this.registers;
     }
 
     private static boolean needsRegister(Node node) {

@@ -2,17 +2,26 @@ package edu.kit.kastel.vads.compiler.parser.visitor;
 
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BitwiseNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BoolLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
 import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ForTree;
 import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IntLiteralTree;
+import edu.kit.kastel.vads.compiler.parser.ast.LogicalNegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
+import edu.kit.kastel.vads.compiler.parser.ast.TernaryTree;
 import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.WhileTree;
 
 /// A visitor that does nothing and returns [Unit#INSTANCE] by default.
 /// This can be used to implement operations only for specific tree types.
@@ -49,7 +58,7 @@ public interface NoOpVisitor<T> extends Visitor<T, Unit> {
     }
 
     @Override
-    default Unit visit(LiteralTree literalTree, T data) {
+    default Unit visit(IntLiteralTree literalTree, T data) {
         return Unit.INSTANCE;
     }
 
@@ -80,6 +89,49 @@ public interface NoOpVisitor<T> extends Visitor<T, Unit> {
 
     @Override
     default Unit visit(TypeTree typeTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(BoolLiteralTree literalTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(IfTree literalTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    default Unit visit(WhileTree tree, T data) {
+        return Unit.INSTANCE;
+    }
+    @Override
+    default Unit visit(LogicalNegateTree literalTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(TernaryTree ternaryTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(ForTree forTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(BitwiseNegateTree forTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(ContinueTree continueTree, T data) {
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    default Unit visit(BreakTree breakTree, T data)  {
         return Unit.INSTANCE;
     }
 }

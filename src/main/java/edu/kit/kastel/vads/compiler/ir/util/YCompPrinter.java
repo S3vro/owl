@@ -3,13 +3,19 @@ package edu.kit.kastel.vads.compiler.ir.util;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
+import edu.kit.kastel.vads.compiler.ir.node.ConstBoolNode;
 import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
+import edu.kit.kastel.vads.compiler.ir.node.ConditionalJumpNode;
+import edu.kit.kastel.vads.compiler.ir.node.ControlFlowNode;
+import edu.kit.kastel.vads.compiler.ir.node.InCodeJmpNode;
+import edu.kit.kastel.vads.compiler.ir.node.JmpNode;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.Phi;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode.SimpleProjectionInfo;
 import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
 import edu.kit.kastel.vads.compiler.ir.node.StartNode;
+import edu.kit.kastel.vads.compiler.ir.node.UndefNode;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -47,6 +53,7 @@ public class YCompPrinter {
                     _ -> Collections.newSetFromMap(new IdentityHashMap<>())
                 )
                 .add(node);
+                prepare(node.block(), seen);
         }
         for (Node predecessor : node.predecessors()) {
             prepare(predecessor, seen);
@@ -166,7 +173,7 @@ public class YCompPrinter {
         StringJoiner result = new StringJoiner("\n");
         List<? extends Node> parents = block.predecessors();
         for (Node parent : parents) {
-            if (parent instanceof ReturnNode) {
+            if (parent instanceof InCodeJmpNode|| parent instanceof ReturnNode ||parent instanceof JmpNode || parent instanceof ConditionalJumpNode || (parent instanceof ProjNode p && (p.projectionInfo() == SimpleProjectionInfo.CF_0 || p.projectionInfo() == SimpleProjectionInfo.CF_1))) {
                 // Return needs no label
                 result.add(formatControlflowEdge(parent, block, ""));
             } else {
@@ -216,17 +223,23 @@ public class YCompPrinter {
             case BinaryOperationNode _ -> VcgColor.NORMAL;
             case Block _ -> VcgColor.NORMAL;
             case ConstIntNode _ -> VcgColor.NORMAL;
-            case Phi _ -> VcgColor.PHI;
+            case ConstBoolNode _ -> VcgColor.NORMAL;
+            case Phi phi -> {
+                if (phi.isSideEffectPhi()) yield VcgColor.MEMORY;
+                yield VcgColor.PHI;
+            }
             case ProjNode proj -> {
                 if (proj.projectionInfo() == SimpleProjectionInfo.SIDE_EFFECT) {
                     yield VcgColor.MEMORY;
                 } else if (proj.projectionInfo() == SimpleProjectionInfo.RESULT) {
                     yield VcgColor.NORMAL;
                 } else {
-                    yield VcgColor.NORMAL;
+                    yield VcgColor.CONTROL_FLOW;
                 }
             }
-            case ReturnNode _ -> VcgColor.CONTROL_FLOW;
+            case InCodeJmpNode _ -> VcgColor.CONTROL_FLOW;
+            case UndefNode _ -> VcgColor.SPECIAL;
+            case ControlFlowNode _ -> VcgColor.CONTROL_FLOW;
             case StartNode _ -> VcgColor.CONTROL_FLOW;
         };
     }
@@ -249,6 +262,8 @@ public class YCompPrinter {
         } else if (node == this.graph.endBlock()) {
             return "end-block";
         }
+        if (node instanceof Block block)
+            return block.getLabel();
         return node.toString();
     }
 
