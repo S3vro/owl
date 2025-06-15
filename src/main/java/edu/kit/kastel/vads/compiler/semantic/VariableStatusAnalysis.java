@@ -187,7 +187,7 @@ class VariableStatusAnalysis implements Visitor<VariableStatusAnalysis.VariableS
         status = forTree.condition().accept(this, status);
         status = status.newScope().newScope();
         status = forTree.body().accept(this, status);
-        status = status.exitScope();
+        status = status.exitScopeAndPropagate();
         status = forTree.statement().isPresent() ? forTree.statement().get().accept(this, status) : status;
         return status.exitScope().exitScopeAndPropagate();
     }
